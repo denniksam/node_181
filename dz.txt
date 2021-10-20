@@ -1,0 +1,6 @@
+Реализовать маршрутизацию (routing):
+на запрос    выводить 
+/hello       Hello, world
+/js          Node is cool
+/            Home, sweet Home
+остальные    Не найдено
