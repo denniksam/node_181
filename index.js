@@ -19,7 +19,8 @@ function serverFunction( request, response ) {
     const requestUrl = requestParts[ 0 ] ;
     // вторая часть - параметры по схеме key1=val1 & key2=val2
     var params = {} ;
-    if( requestParts.length > 1 ) {  // есть вторая часть
+    if( requestParts.length > 1         // есть вторая часть
+     && requestParts[1].length > 0 ) {  // и она не пустая
         for( let keyval of requestParts[1].split( "&" ) ) {
             let pair = keyval.split( "=" ) ;
             params[ pair[0] ] = 
@@ -29,7 +30,7 @@ function serverFunction( request, response ) {
         }
     }
     console.log( params ) ;
-    
+
     // проверить запрос на спецсимволы (../)
     const restrictedParts = [ "../", ";" ] ;
     for( let part of restrictedParts ) {
@@ -54,7 +55,13 @@ function serverFunction( request, response ) {
     if( url == '' ) {
         // запрос / - передаем индексный файл
         sendFile( "www/index.html", response ) ;
-    } else {
+    }
+    else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/
+        request.params = params;
+        processApi( request, response ) ;
+        return ;
+    }
+    else {
         // необработанный запрос - "не найдено" (404.html)
         sendFile( FILE_404, response, 404 ) ;  
     }
@@ -146,4 +153,16 @@ function getMimeType( path ) {
         default :
             return DEFAULT_MIME ;
     }
+}
+
+// Обратка запросов   api/*
+async function processApi( request, response ) {
+    var res = {} ;
+
+    res.status = "Works" ;
+    // упражнение: включить в ответ все принятые параметры запроса
+    res.params = request.params;
+    
+    response.setHeader( 'Content-Type', 'application/json' ) ;
+    response.end( JSON.stringify( res ) ) ;
 }

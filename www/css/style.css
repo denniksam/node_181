@@ -5,7 +5,8 @@ body {
 }
 .add-image-form {
     border: 2px solid gray;
-
+    display: inline-block;
+    padding: 5px;
 }
 .add-image-form cite {
     font-variant: small-caps;
