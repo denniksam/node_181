@@ -10,11 +10,33 @@ const fs   = require( "fs" ) ;   // file system
 
 // Серверная функция
 function serverFunction( request, response ) {
+    // определение данных из тела запроса (POST-данных)
+    /* Если запрос большой, то тело может передаваться частями
+       (chunk-ами). Для работы с телом необходимо его сначала
+       получить (собрать), затем обрабатывать. Приход
+       чанка сопровождается событием "data", конец пакета
+       - событием "end" */
+
+    requestBody = [] ;   // массив для чанков
+    request.on( "data", chunk => requestBody.push( chunk ) )
+           .on( "end", () => {  // конец получения пакета (запроса)
+               request.params = { 
+                   body: Buffer.concat( requestBody ).toString() 
+                } ;
+               analyze( request, response ) ;
+           } ) ;    
+}
+
+function analyze( request, response ) {
     // логируем запрос - это must have для всех серверов
     console.log( request.method + " " + request.url ) ;
     
+    // Декодируем запрос: "+" -> пробел, затем decodeURI
+    var decodedUrl = request.url.replace( /\+/g, ' ' )  ;
+    decodedUrl = decodeURIComponent( decodedUrl ) ;
+
     // разделяем запрос по "?" - отделяем параметры
-    const requestParts = request.url.split( "?" ) ;
+    const requestParts = decodedUrl.split( "?" )  ;
     // первая часть (до ?) - сам запрос
     const requestUrl = requestParts[ 0 ] ;
     // вторая часть - параметры по схеме key1=val1 & key2=val2
@@ -57,7 +79,7 @@ function serverFunction( request, response ) {
         sendFile( "www/index.html", response ) ;
     }
     else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/
-        request.params = params;
+        request.params.query = params;
         processApi( request, response ) ;
         return ;
     }
@@ -162,7 +184,7 @@ async function processApi( request, response ) {
     res.status = "Works" ;
     // упражнение: включить в ответ все принятые параметры запроса
     res.params = request.params;
-    
+
     response.setHeader( 'Content-Type', 'application/json' ) ;
     response.end( JSON.stringify( res ) ) ;
 }
