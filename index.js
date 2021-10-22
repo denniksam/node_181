@@ -4,9 +4,10 @@ const WWW_ROOT     = "www" ;
 const FILE_404     = WWW_ROOT + "/404.html" ;
 const DEFAULT_MIME = "application/octet-stream" ;
 
-// Подключение модуля
-const http = require( "http" ) ;
-const fs   = require( "fs" ) ;   // file system
+// Подключение модулей
+const http       = require( "http" ) ;        // HTTP
+const fs         = require( "fs" ) ;          // file system
+const formidable = require( "formidable" ) ;  // Form parser
 
 // Серверная функция
 function serverFunction( request, response ) {
@@ -16,7 +17,7 @@ function serverFunction( request, response ) {
        получить (собрать), затем обрабатывать. Приход
        чанка сопровождается событием "data", конец пакета
        - событием "end" */
-
+/*
     requestBody = [] ;   // массив для чанков
     request.on( "data", chunk => requestBody.push( chunk ) )
            .on( "end", () => {  // конец получения пакета (запроса)
@@ -24,7 +25,12 @@ function serverFunction( request, response ) {
                    body: Buffer.concat( requestBody ).toString() 
                 } ;
                analyze( request, response ) ;
-           } ) ;    
+           } ) ;    */
+
+           request.params = { 
+                body: "" 
+            } ;
+           analyze( request, response ) ;
 }
 
 function analyze( request, response ) {
@@ -180,7 +186,15 @@ function getMimeType( path ) {
 // Обратка запросов   api/*
 async function processApi( request, response ) {
     var res = {} ;
-
+    // принять данные формы
+    // ! отключить (если есть) наш обработчик событий data/end
+    const formParser = formidable.IncomingForm() ;
+    formParser.parse( 
+        request, 
+        (err, fields, files) => {
+            console.log(err, fields, files);
+        } ) ;
+    // return ;
     res.status = "Works" ;
     // упражнение: включить в ответ все принятые параметры запроса
     res.params = request.params;
@@ -188,3 +202,21 @@ async function processApi( request, response ) {
     response.setHeader( 'Content-Type', 'application/json' ) ;
     response.end( JSON.stringify( res ) ) ;
 }
+
+/*
+    npm : Node Pack Manager
+    1. Инициализация папки - создание файла package.json
+      npm init
+      npm init -y
+    2. Установка пакетов 
+      npm install <pack-name>
+      npm i <pack-name>
+    3. Команда(ы) запуска
+      "scripts": {
+        "mystart": "node index.js",  // npm run mystart
+        "start": "node index.js",    // npm start
+    
+    formidable - пакет для приема данных формы (в т.ч. файлов)
+    npm i formidable
+
+*/
