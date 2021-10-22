@@ -11,7 +11,9 @@ document.addEventListener("submit",(e)=>{
 
     const formData = new FormData();
     formData.append("description", descr.value);
-    formData.append("place", place.value);
+    // place optional, include if not empty
+    if(place.value.length > 0)
+        formData.append("place", place.value);
     formData.append("picture", picture.files[0]);
 /*
     fetch("/api/picture?" + new URLSearchParams(formData).toString(), {
@@ -23,3 +25,8 @@ document.addEventListener("submit",(e)=>{
         body: formData  // new URLSearchParams(formData).toString()
     }).then(r=>r.text()).then(console.log);
 });
+/*
+    В случае удачной загрузки изображения вывести (добавить на страницу)
+     эту картинку и описание / место (если есть) + очистить форму
+    Неудачной - alert и не очищать форму
+*/

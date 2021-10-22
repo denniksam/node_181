@@ -3,6 +3,7 @@ const HTTP_PORT    = 80 ;
 const WWW_ROOT     = "www" ;
 const FILE_404     = WWW_ROOT + "/404.html" ;
 const DEFAULT_MIME = "application/octet-stream" ;
+const UPLOAD_PATH  = WWW_ROOT + "/pictures/"
 
 // Подключение модулей
 const http       = require( "http" ) ;        // HTTP
@@ -63,10 +64,7 @@ function analyze( request, response ) {
     const restrictedParts = [ "../", ";" ] ;
     for( let part of restrictedParts ) {
         if( requestUrl.indexOf( part ) !== -1 ) {
-            // TODO: создать страницу "Опасный запрос"
-            response.statusCode = 418 ;
-            response.setHeader( 'Content-Type', 'text/plain' ) ;
-            response.end( "I'm a teapot" ) ;
+            send418() ;
             return ;
         }
     }
@@ -185,22 +183,86 @@ function getMimeType( path ) {
 
 // Обратка запросов   api/*
 async function processApi( request, response ) {
-    var res = {} ;
+    var res = { status: "" } ;
     // принять данные формы
     // ! отключить (если есть) наш обработчик событий data/end
     const formParser = formidable.IncomingForm() ;
     formParser.parse( 
         request, 
         (err, fields, files) => {
-            console.log(err, fields, files);
-        } ) ;
-    // return ;
-    res.status = "Works" ;
-    // упражнение: включить в ответ все принятые параметры запроса
-    res.params = request.params;
+            if( err ) {
+                console.error( err ) ;
+                send500() ;
+                return ;
+            }
+            // console.log( fields, files ) ;
+            // console.log( files["picture"] ) ;
 
-    response.setHeader( 'Content-Type', 'application/json' ) ;
-    response.end( JSON.stringify( res ) ) ;
+            let validateRes = validatePictureForm( fields, files ) ;
+            if( validateRes === true ) {
+                // OK
+                const savedName = moveUploadedFile( files.picture ) ;
+                res.status = "Works " + savedName ;
+            } else {
+                // Validation error, validateRes - message
+                send412( validateRes ) ;
+                return ;
+            }            
+
+            response.setHeader( 'Content-Type', 'application/json' ) ;
+            response.end( JSON.stringify( res ) ) ;
+        } ) ;
+    
+}
+
+function moveUploadedFile( file ) {
+    var counter = 1 ;
+    var savedName ;
+    do {
+        savedName = `(${counter++})_${file.name}` ;
+    } while( fs.existsSync( UPLOAD_PATH + savedName ) ) ;
+    fs.rename( file.path, UPLOAD_PATH + savedName, 
+        err => { if( err ) console.log( err ) ; } ) ;
+    return savedName ;
+}
+
+function validatePictureForm( fields, files ) {
+    // задание: проверить поля на наличие и допустимость
+    if( typeof files["picture"] == 'undefined' ) {
+        return "File required" ;
+    }
+    if( typeof fields["description"] == 'undefined' ) {
+        return "Description required" ;
+    }
+    if( fields["description"].length == 0 ) {
+        return "Description should be non-empty" ;
+    }
+    // place optional. But if present then should be non-empty
+    if( typeof fields["place"] != 'undefined'
+     && fields["place"].length == 0 ) {
+        return "Place should be non-empty" ;
+    }
+
+    return true ;
+}
+
+async function send412( message ) {
+    response.statusCode = 412 ;
+    response.setHeader( 'Content-Type', 'text/plain' ) ;
+    response.end( "Precondition Failed: " + message ) ;
+}
+
+async function send418() {
+    // TODO: создать страницу "Опасный запрос"
+    response.statusCode = 418 ;
+    response.setHeader( 'Content-Type', 'text/plain' ) ;
+    response.end( "I'm a teapot" ) ;
+}
+
+async function send500() {
+    response.statusCode = 500 ;
+    response.setHeader( 'Content-Type', 'text/plain' ) ;
+    response.end( "Error in server" ) ;
 }
 
 /*
