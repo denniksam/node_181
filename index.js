@@ -10,6 +10,7 @@ const http       = require( "http" ) ;        // HTTP
 const fs         = require( "fs" ) ;          // file system
 const formidable = require( "formidable" ) ;  // Form parser
 const mysql      = require( 'mysql' ) ;
+const crypto     = require( 'crypto' ) ;      // Средства криптографии (в т.ч. хеш)
 
 const connectionData = {
     host:     'localhost',     // размещение БД (возможно IP или hostname)
@@ -258,20 +259,20 @@ function validatePictureForm( fields, files ) {
     return true ;
 }
 
-async function send412( message ) {
+async function send412( response, message ) {
     response.statusCode = 412 ;
     response.setHeader( 'Content-Type', 'text/plain' ) ;
     response.end( "Precondition Failed: " + message ) ;
 }
 
-async function send418() {
+async function send418( response ) {
     // TODO: создать страницу "Опасный запрос"
     response.statusCode = 418 ;
     response.setHeader( 'Content-Type', 'text/plain' ) ;
     response.end( "I'm a teapot" ) ;
 }
 
-async function send500() {
+async function send500( response ) {
     response.statusCode = 500 ;
     response.setHeader( 'Content-Type', 'text/plain' ) ;
     response.end( "Error in server" ) ;
@@ -281,14 +282,19 @@ async function send500() {
 function viewDb( request, response ) {
     // создаем подключение
     const connection = mysql.createConnection( connectionData ) ;
-    /*connection.connect( err => {
+    
+    connection.connect( err => {
         if( err ) {
             console.error( err ) ;
-            send500() ;
+            send500( response ) ;
         } else {
-            response.end( "Connection OK" ) ;
+            
+            const salt = crypto.createHash( 'sha1' ).update( "123" ).digest( 'hex' ) ;
+            const pass = crypto.createHash( 'sha1' ).update( "123" + salt ).digest( 'hex' ) ;
+
+            response.end( "Connection OK " + salt + " " + pass ) ;
         }
-    } ) ;*/
+    } ) ;
 }
 
 /*
@@ -321,4 +327,38 @@ function viewDb( request, response ) {
         // или
         npm i mysql2
     2. Параметры и подключение
+        2.1. const connectionData = {
+            host:     'localhost',     // размещение БД (возможно IP или hostname)
+            port:     3306,            // порт 
+            user:     'gallery_user',  // логин пользователя ( to 'gallery_user'@'localhost' )
+            password: 'gallery_pass',  // пароль ( identified by 'gallery_pass' )
+            database: 'gallery',       // schema/db  (  create database gallery; ) 
+            charset:  'utf8'           // кодировка канала подключения
+        } ;
+        2.2. const connection = mysql.createConnection( connectionData ) ;
+        2.3. connection.connect( err => {
+            if( err ) {
+                console.error( err ) ;
+                send500( response ) ;
+            } else {
+                response.end( "Connection OK" ) ;
+            }
+        } ) ;
+    3. Работа с крипто-хешем: модуль crypto
+*/
+/*
+    Упражнение "Авторизация"
+    1. Создание таблицы
+    CREATE TABLE users (
+        id        BIGINT      DEFAULT UUID_SHORT() PRIMARY KEY,
+        login     VARCHAR(64) NOT NULL,
+        pass_salt CHAR(40)    NOT NULL,
+        pass_hash CHAR(40)    NOT NULL,
+        email     VARCHAR(64) NOT NULL,
+        picture   VARCHAR(256)
+    ) ENGINE = InnoDB, DEFAULT CHARSET = UTF8 ;
+
+    2. Тестовые записи
+    INSERT INTO users( login, pass_salt, pass_hash, email ) VALUES
+    ( 'admin', '202cb962ac59075b964b07152d234b70', 'af17a6d2be6676b4cf53b3ae81796fa6', 'admin@gallery.step' ) ;
 */
