@@ -11,6 +11,7 @@ const fs         = require( "fs" ) ;          // file system
 const formidable = require( "formidable" ) ;  // Form parser
 const mysql      = require( 'mysql' ) ;
 const crypto     = require( 'crypto' ) ;      // Средства криптографии (в т.ч. хеш)
+const mysql2     = require( 'mysql2' ) ;      // Обновленные средства для MySQL
 
 const connectionData = {
     host:     'localhost',     // размещение БД (возможно IP или hostname)
@@ -70,6 +71,7 @@ function analyze( request, response ) {
         }
     }
     console.log( params ) ;
+    request.params.query = params;
 
     // проверить запрос на спецсимволы (../)
     const restrictedParts = [ "../", ";" ] ;
@@ -96,8 +98,17 @@ function analyze( request, response ) {
     else if( url == 'db' ) {
         viewDb( request, response ) ;
     }
+    else if( url == 'dbpool' ) {
+        viewDbPool( request, response ) ;
+    }
+    else if( url == 'db2' ) {
+        viewDb2( request, response ) ;
+    }
+    else if( url == 'auth' ) {
+        viewAuth( request, response ) ;
+    }
     else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/
-        request.params.query = params;
+        
         processApi( request, response ) ;
         return ;
     }
@@ -288,15 +299,70 @@ function viewDb( request, response ) {
             console.error( err ) ;
             send500( response ) ;
         } else {
-            
-            const salt = crypto.createHash( 'sha1' ).update( "123" ).digest( 'hex' ) ;
-            const pass = crypto.createHash( 'sha1' ).update( "123" + salt ).digest( 'hex' ) ;
-
+            /*// для тестовой записи в БД
+            const salt = crypto.createHash( 'sha1' ).update( "321" ).digest( 'hex' ) ;
+            const pass = crypto.createHash( 'sha1' ).update( "321" + salt ).digest( 'hex' ) ;
             response.end( "Connection OK " + salt + " " + pass ) ;
+            */
+           
+            // выполнение запросов
+            connection.query( "select * from users", ( err, results, fields ) => {
+                if( err ) {
+                    console.error( err ) ;
+                    send500( response ) ;
+                } else {
+                    // console.log( results ) ;
+                    // console.log( " ------ " ) ;
+                    // console.log( fields ) ;
+                    // Задание: сформировать html-таблицу с результатами запроса
+                    var table = "<table border=1>" ;
+                    for( let row of results )
+                        table += `<tr><td>${row.id}</td><td>${row.login}</td></tr>`
+                    table += "</table>" ;
+                    response.end( table ) ;
+                }
+            } ) ;           
         }
     } ) ;
 }
 
+function viewDbPool( request, response ) {
+    const pool = mysql.createPool( connectionData ) ;
+    pool.query( "select * from users", 
+        ( err, results, fields ) => {
+        if( err ) {
+            console.error( err ) ;
+            send500( response ) ;
+        } else {
+            var table = "<table border=1 cellspacing=0>" ;
+            for( let row of results )
+                table += `<tr><td>${row.id}</td><td>${row.login}</td><td>${row.email}</td></tr>`
+            table += "</table>" ;
+            response.end( table ) ;
+        }
+    } ) ;
+}
+
+function viewDb2( request, response ) {
+    // mysql2 - расширение mysql, поэтому поддерживает те же функции. + promiseAPI
+    const pool2 = mysql2.createPool( connectionData ).promise() ;
+    pool2.query( "select * from users" )
+         .then( ( [ results, fields ] ) => {
+            var table = "<table border=1 cellspacing=0>" ;
+            for( let row of results )
+                table += `<tr><td>${row.id}</td><td>${row.login}</td><td>${row.email}</td></tr>`
+            table += "</table>" ;
+            response.end( table ) ;
+         } )
+         .catch( err => { 
+            console.error( err ) ;
+            send500( response ) ;
+         } )
+}
+
+function viewAuth( request, response ) {
+    response.end(request.params.query.login + " " +request.params.query.pass  ) ;
+}
 /*
     npm : Node Pack Manager
     1. Инициализация папки - создание файла package.json
@@ -345,6 +411,17 @@ function viewDb( request, response ) {
             }
         } ) ;
     3. Работа с крипто-хешем: модуль crypto
+    4. Запросы: connection.query( "SQL", (err, results, fields)=>{} )
+    5. Пул подключений.
+        Подключение к БД - системный ресурс (неуправляемый), требующий закрытия.
+        ? Сайт обычно работает с одной БД и все обращения (запросы) подключаются к ней
+          Если есть возможность повторного использования подключения - это хорошо
+        ? Если с каждым запросом открывать новое подключение и не закрывать его,
+           то возможны сбои СУБД
+        Современное решение - пул подключений
+        const pool = mysql.createPool( connectionData ) ;
+        далее, к pool обращение такое же, как к connection, например, 
+           pool.query( "SQL", (err, results, fields)=>{} )
 */
 /*
     Упражнение "Авторизация"
@@ -358,7 +435,19 @@ function viewDb( request, response ) {
         picture   VARCHAR(256)
     ) ENGINE = InnoDB, DEFAULT CHARSET = UTF8 ;
 
-    2. Тестовые записи
+    2. Тестовые записи (пароль 123)
     INSERT INTO users( login, pass_salt, pass_hash, email ) VALUES
-    ( 'admin', '202cb962ac59075b964b07152d234b70', 'af17a6d2be6676b4cf53b3ae81796fa6', 'admin@gallery.step' ) ;
+    ( 'admin', '40bd001563085fc35165329ea1ff5c5ecbdbbeef', '5e558e07a57a3df06e8870d690c4a22f21c76e61', 'admin@gallery.step' ) ;
+*/
+
+// Задание: подготовить данные  (стр. 375) для 'user' с паролем '321'
+/* INSERT INTO users( login, pass_salt, pass_hash, email ) VALUES
+   ( 'user', '5f6955d227a320c7f1f6c7da2a6d96a851a8118f', '975b234495c549a37884458b12df0c495b7afc5c', 'user@gallery.step' ) ;
+
+*/
+
+/*
+    Задание: сделать страницу авторизации - 
+    поля ввода логина/пароля + кнопка "вход"
+    после нажатия: а) добро пожаловать б) посторонним вход воспрещен
 */
