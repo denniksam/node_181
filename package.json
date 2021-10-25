@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/denniksam/node_181#readme",
   "dependencies": {
-    "formidable": "^1.2.2"
+    "formidable": "^1.2.2",
+    "mysql": "^2.18.1",
+    "mysql2": "^2.3.2"
   }
 }

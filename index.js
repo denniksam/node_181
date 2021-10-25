@@ -9,6 +9,16 @@ const UPLOAD_PATH  = WWW_ROOT + "/pictures/"
 const http       = require( "http" ) ;        // HTTP
 const fs         = require( "fs" ) ;          // file system
 const formidable = require( "formidable" ) ;  // Form parser
+const mysql      = require( 'mysql' ) ;
+
+const connectionData = {
+    host:     'localhost',     // размещение БД (возможно IP или hostname)
+    port:     3306,            // порт 
+    user:     'gallery_user',  // логин пользователя ( to 'gallery_user'@'localhost' )
+    password: 'gallery_pass',  // пароль ( identified by 'gallery_pass' )
+    database: 'gallery',       // schema/db  (  create database gallery; ) 
+    charset:  'utf8'           // кодировка канала подключения
+} ;
 
 // Серверная функция
 function serverFunction( request, response ) {
@@ -82,6 +92,9 @@ function analyze( request, response ) {
         // запрос / - передаем индексный файл
         sendFile( "www/index.html", response ) ;
     }
+    else if( url == 'db' ) {
+        viewDb( request, response ) ;
+    }
     else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/
         request.params.query = params;
         processApi( request, response ) ;
@@ -106,7 +119,6 @@ server.listen(  // регистрируемся в ОС на получение
     } 
 ) ;
 
-// задание
 async function sendFile2( path, response, statusCode ) {
     fs.readFile(
         path,
@@ -265,6 +277,20 @@ async function send500() {
     response.end( "Error in server" ) ;
 }
 
+// Работа с БД
+function viewDb( request, response ) {
+    // создаем подключение
+    const connection = mysql.createConnection( connectionData ) ;
+    /*connection.connect( err => {
+        if( err ) {
+            console.error( err ) ;
+            send500() ;
+        } else {
+            response.end( "Connection OK" ) ;
+        }
+    } ) ;*/
+}
+
 /*
     npm : Node Pack Manager
     1. Инициализация папки - создание файла package.json
@@ -281,4 +307,18 @@ async function send500() {
     formidable - пакет для приема данных формы (в т.ч. файлов)
     npm i formidable
 
+*/
+
+
+/*
+    Работа с БД MySQL
+    0. Настройка БД (в MySQL)
+        // запускаем терминал СУБД / граф. интерфейс, подаем команды:
+        create database gallery;
+        grant all privileges on gallery.* to 'gallery_user'@'localhost' identified by 'gallery_pass';
+    1. Установка пакетов
+        npm i mysql
+        // или
+        npm i mysql2
+    2. Параметры и подключение
 */
