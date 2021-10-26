@@ -1,6 +1,10 @@
 document.addEventListener("submit",(e)=>{
     e.preventDefault();
     const form = e.target;
+
+    const title = form.querySelector("input[name=title]");
+    if(!title) throw "Data transfer error: input[name=title] not found";
+
     const descr = form.querySelector("input[name=description]");
     if(!descr) throw "Data transfer error: input[name=description] not found";
     const place = form.querySelector("input[name=place]");
@@ -10,6 +14,7 @@ document.addEventListener("submit",(e)=>{
     // TODO: data validation
 
     const formData = new FormData();
+    formData.append("title", title.value);
     formData.append("description", descr.value);
     // place optional, include if not empty
     if(place.value.length > 0)
@@ -20,10 +25,16 @@ document.addEventListener("submit",(e)=>{
         method: "GET"
     }).then(r=>r.text()).then(console.log);
     */
-    fetch("/api/picture?x=10", {
+    fetch("/api/picture", {
         method: "POST",
         body: formData  // new URLSearchParams(formData).toString()
     }).then(r=>r.text()).then(console.log);
+});
+
+document.addEventListener("DOMContentLoaded",()=>{
+    fetch("/api/picture")
+    .then(r=>r.text())
+    .then(console.log)
 });
 /*
     В случае удачной загрузки изображения вывести (добавить на страницу)

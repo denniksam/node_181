@@ -22,28 +22,21 @@ const connectionData = {
     charset:  'utf8'           // кодировка канала подключения
 } ;
 
+const services = { dbPool: null } ;
+
 // Серверная функция
 function serverFunction( request, response ) {
-    // определение данных из тела запроса (POST-данных)
-    /* Если запрос большой, то тело может передаваться частями
-       (chunk-ами). Для работы с телом необходимо его сначала
-       получить (собрать), затем обрабатывать. Приход
-       чанка сопровождается событием "data", конец пакета
-       - событием "end" */
-/*
-    requestBody = [] ;   // массив для чанков
-    request.on( "data", chunk => requestBody.push( chunk ) )
-           .on( "end", () => {  // конец получения пакета (запроса)
-               request.params = { 
-                   body: Buffer.concat( requestBody ).toString() 
-                } ;
-               analyze( request, response ) ;
-           } ) ;    */
 
-           request.params = { 
-                body: "" 
-            } ;
-           analyze( request, response ) ;
+    services.dbPool = mysql2.createPool( connectionData ) ;
+    response.on( "close", () => {
+        services.dbPool.end() ;
+    } ) ;
+
+    request.params = { 
+        body:  "",
+        query: ""
+    } ;
+    analyze( request, response ) ;
 }
 
 function analyze( request, response ) {
@@ -91,6 +84,7 @@ function analyze( request, response ) {
     }
     // нет, это не файл. Маршрутизируем
     const url = requestUrl.substring(1) ;
+    request.decodedUrl = url ;
     if( url == '' ) {
         // запрос / - передаем индексный файл
         sendFile( "www/index.html", response ) ;
@@ -107,8 +101,7 @@ function analyze( request, response ) {
     else if( url == 'auth' ) {
         viewAuth( request, response ) ;
     }
-    else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/
-        
+    else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/        
         processApi( request, response ) ;
         return ;
     }
@@ -210,6 +203,37 @@ async function processApi( request, response ) {
     var res = { status: "" } ;
     // принять данные формы
     // ! отключить (если есть) наш обработчик событий data/end
+    
+    const apiUrl = request.decodedUrl.substring( 4 ) ;  // удаляем api/ из начала
+    const method = request.method.toUpperCase() ;
+   
+    if( apiUrl == "picture" ) {
+        switch( method ) {
+            case 'GET'  :  // возврат списка картин
+                retPicturesList( request, response ) ;
+                break ;
+            case 'POST' :  // загрузка новой картины
+                loadPicture( request, response ) ;
+                break ;
+        }        
+    }
+}
+
+async function retPicturesList( request, response ) {
+    // Возврать JSON данных по всем картинам
+    // response.end( "Works" ) ;
+    services.dbPool.query( "select * from pictures", ( err, results ) => {
+        if( err ) {
+            console.log( err ) ;
+            send500( response ) ;
+        } else {
+            response.setHeader( 'Content-Type', 'application/json' ) ;
+            response.end( JSON.stringify( results ) ) ;
+        }
+    } ) ;
+}
+
+async function loadPicture( request, response ) {
     const formParser = formidable.IncomingForm() ;
     formParser.parse( 
         request, 
@@ -226,23 +250,62 @@ async function processApi( request, response ) {
             if( validateRes === true ) {
                 // OK
                 const savedName = moveUploadedFile( files.picture ) ;
-                res.status = "Works " + savedName ;
+
+                addPicture( {
+                    title:       fields.title,
+                    description: fields.description,
+                    place:       fields.place,
+                    filename:    savedName
+                } )
+                .then( results => {
+                    res.status = results.affectedRows ;
+                    response.setHeader( 'Content-Type', 'application/json' ) ;
+                    response.end( JSON.stringify( res ) ) ;
+                } )
+                .catch( err => {
+                    console.error( err ) ;
+                    send500( response ) ;
+                } ) ;
+                // res.status = savedName ;
             } else {
                 // Validation error, validateRes - message
-                send412( validateRes ) ;
+                send412( response, validateRes ) ;
                 return ;
-            }            
+            }
+        } ) ;  
+}
 
-            response.setHeader( 'Content-Type', 'application/json' ) ;
-            response.end( JSON.stringify( res ) ) ;
+function addPicture( pic ) {
+    /* // вариант 1
+    const query = 'INSERT INTO pictures ( title, description, place, filename )' +
+    `VALUES ('${pic.title}', '${pic.description}', '${pic.place}', '${pic.filename}')` ;
+    services.dbPool.query( query, ( err, results ) => {
+        if( err ) {
+            console.error( err ) ;
+        } else {
+            console.log( results ) ;
+        }
+    } ) ; */
+    // Вариант 2
+    const query = "INSERT INTO pictures(title, description, place, filename) VALUES (?, ?, ?, ?)" ;
+    const params = [
+        pic.title, 
+        pic.description, 
+        pic.place, 
+        pic.filename ] ;
+    return new Promise( ( resolve, reject ) => {
+        services.dbPool.query( query, params, ( err, results ) => {
+            if( err ) reject( err ) ;
+            else resolve( results ) ;
         } ) ;
-    
+    } ) ;    
 }
 
 function moveUploadedFile( file ) {
     var counter = 1 ;
     var savedName ;
     do {
+        // TODO: trim filename to 64 symbols
         savedName = `(${counter++})_${file.name}` ;
     } while( fs.existsSync( UPLOAD_PATH + savedName ) ) ;
     fs.rename( file.path, UPLOAD_PATH + savedName, 
@@ -255,6 +318,14 @@ function validatePictureForm( fields, files ) {
     if( typeof files["picture"] == 'undefined' ) {
         return "File required" ;
     }
+    // title should be
+    if( typeof fields["title"] == 'undefined' ) {
+        return "Title required" ;
+    }
+    if( fields["title"].length == 0 ) {
+        return "Title should be non-empty" ;
+    }
+    // description should be
     if( typeof fields["description"] == 'undefined' ) {
         return "Description required" ;
     }
@@ -380,8 +451,6 @@ function viewAuth( request, response ) {
     npm i formidable
 
 */
-
-
 /*
     Работа с БД MySQL
     0. Настройка БД (в MySQL)
@@ -439,15 +508,42 @@ function viewAuth( request, response ) {
     INSERT INTO users( login, pass_salt, pass_hash, email ) VALUES
     ( 'admin', '40bd001563085fc35165329ea1ff5c5ecbdbbeef', '5e558e07a57a3df06e8870d690c4a22f21c76e61', 'admin@gallery.step' ) ;
 */
-
 // Задание: подготовить данные  (стр. 375) для 'user' с паролем '321'
 /* INSERT INTO users( login, pass_salt, pass_hash, email ) VALUES
    ( 'user', '5f6955d227a320c7f1f6c7da2a6d96a851a8118f', '975b234495c549a37884458b12df0c495b7afc5c', 'user@gallery.step' ) ;
 
 */
-
 /*
     Задание: сделать страницу авторизации - 
     поля ввода логина/пароля + кнопка "вход"
     после нажатия: а) добро пожаловать б) посторонним вход воспрещен
 */
+/*
+    Структура таблицы для галереи (картин галереи)
+    CREATE TABLE pictures (
+        id          BIGINT   DEFAULT UUID_SHORT()   PRIMARY KEY,
+        title       VARCHAR(128) NOT NULL,
+        description TEXT,
+        place       VARCHAR(256),
+        filename    VARCHAR(256) NOT NULL,
+        users_id    BIGINT,                               -- uploader ID
+        upload_DT   DATETIME  DEFAULT CURRENT_TIMESTAMP,  -- upload Date/time
+        delete_DT   DATETIME                              -- delete date/time  
+    ) ENGINE=InnoDB DEFAULT CHARSET=UTF8 ;
+*/
+
+// определение данных из тела запроса (POST-данных)
+    /* Если запрос большой, то тело может передаваться частями
+       (chunk-ами). Для работы с телом необходимо его сначала
+       получить (собрать), затем обрабатывать. Приход
+       чанка сопровождается событием "data", конец пакета
+       - событием "end" */
+/*
+    requestBody = [] ;   // массив для чанков
+    request.on( "data", chunk => requestBody.push( chunk ) )
+           .on( "end", () => {  // конец получения пакета (запроса)
+               request.params = { 
+                   body: Buffer.concat( requestBody ).toString() 
+                } ;
+               analyze( request, response ) ;
+           } ) ;    */
