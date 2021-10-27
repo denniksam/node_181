@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "NodeJS learning project",
   "main": "index.js",
+  "mode": "module",
   "scripts": {
     "mystart": "node index.js",
     "start": "node index.js",

@@ -8,10 +8,11 @@ const UPLOAD_PATH  = WWW_ROOT + "/pictures/"
 // Подключение модулей
 const http       = require( "http" ) ;        // HTTP
 const fs         = require( "fs" ) ;          // file system
-const formidable = require( "formidable" ) ;  // Form parser
 const mysql      = require( 'mysql' ) ;
 const crypto     = require( 'crypto' ) ;      // Средства криптографии (в т.ч. хеш)
 const mysql2     = require( 'mysql2' ) ;      // Обновленные средства для MySQL
+
+const pictureController = require( "./pictureController" ) ;
 
 const connectionData = {
     host:     'localhost',     // размещение БД (возможно IP или hostname)
@@ -28,6 +29,21 @@ const services = { dbPool: null } ;
 function serverFunction( request, response ) {
 
     services.dbPool = mysql2.createPool( connectionData ) ;
+
+    request.services = services ;
+    response.errorHandlers = {
+        "send500": () => {
+            response.statusCode = 500 ;
+            response.setHeader( 'Content-Type', 'text/plain' ) ;
+            response.end( "Error in server" ) ;
+        },
+        "send412": message => {
+            response.statusCode = 412 ;
+            response.setHeader( 'Content-Type', 'text/plain' ) ;
+            response.end( "Precondition Failed: " + message ) ;
+        }
+    } ;
+
     response.on( "close", () => {
         services.dbPool.end() ;
     } ) ;
@@ -204,147 +220,24 @@ async function processApi( request, response ) {
     // принять данные формы
     // ! отключить (если есть) наш обработчик событий data/end
     
-    const apiUrl = request.decodedUrl.substring( 4 ) ;  // удаляем api/ из начала
-    const method = request.method.toUpperCase() ;
+    const apiUrl = request.decodedUrl.substring( 4 ) ;  // удаляем api/ из начала   
    
     if( apiUrl == "picture" ) {
-        switch( method ) {
-            case 'GET'  :  // возврат списка картин
-                retPicturesList( request, response ) ;
-                break ;
-            case 'POST' :  // загрузка новой картины
-                loadPicture( request, response ) ;
-                break ;
-        }        
+        pictureController.analyze( request, response ) ;
     }
-}
-
-async function retPicturesList( request, response ) {
-    // Возврать JSON данных по всем картинам
-    // response.end( "Works" ) ;
-    services.dbPool.query( "select * from pictures", ( err, results ) => {
-        if( err ) {
-            console.log( err ) ;
-            send500( response ) ;
-        } else {
-            response.setHeader( 'Content-Type', 'application/json' ) ;
-            response.end( JSON.stringify( results ) ) ;
-        }
-    } ) ;
-}
-
-async function loadPicture( request, response ) {
-    const formParser = formidable.IncomingForm() ;
-    formParser.parse( 
-        request, 
-        (err, fields, files) => {
-            if( err ) {
-                console.error( err ) ;
-                send500() ;
-                return ;
-            }
-            // console.log( fields, files ) ;
-            // console.log( files["picture"] ) ;
-
-            let validateRes = validatePictureForm( fields, files ) ;
-            if( validateRes === true ) {
-                // OK
-                const savedName = moveUploadedFile( files.picture ) ;
-
-                addPicture( {
-                    title:       fields.title,
-                    description: fields.description,
-                    place:       fields.place,
-                    filename:    savedName
-                } )
-                .then( results => {
-                    res.status = results.affectedRows ;
-                    response.setHeader( 'Content-Type', 'application/json' ) ;
-                    response.end( JSON.stringify( res ) ) ;
-                } )
-                .catch( err => {
-                    console.error( err ) ;
-                    send500( response ) ;
-                } ) ;
-                // res.status = savedName ;
-            } else {
-                // Validation error, validateRes - message
-                send412( response, validateRes ) ;
-                return ;
-            }
-        } ) ;  
-}
-
-function addPicture( pic ) {
-    /* // вариант 1
-    const query = 'INSERT INTO pictures ( title, description, place, filename )' +
-    `VALUES ('${pic.title}', '${pic.description}', '${pic.place}', '${pic.filename}')` ;
-    services.dbPool.query( query, ( err, results ) => {
-        if( err ) {
-            console.error( err ) ;
-        } else {
-            console.log( results ) ;
-        }
-    } ) ; */
-    // Вариант 2
-    const query = "INSERT INTO pictures(title, description, place, filename) VALUES (?, ?, ?, ?)" ;
-    const params = [
-        pic.title, 
-        pic.description, 
-        pic.place, 
-        pic.filename ] ;
-    return new Promise( ( resolve, reject ) => {
-        services.dbPool.query( query, params, ( err, results ) => {
-            if( err ) reject( err ) ;
-            else resolve( results ) ;
-        } ) ;
-    } ) ;    
-}
-
-function moveUploadedFile( file ) {
-    var counter = 1 ;
-    var savedName ;
-    do {
-        // TODO: trim filename to 64 symbols
-        savedName = `(${counter++})_${file.name}` ;
-    } while( fs.existsSync( UPLOAD_PATH + savedName ) ) ;
-    fs.rename( file.path, UPLOAD_PATH + savedName, 
-        err => { if( err ) console.log( err ) ; } ) ;
-    return savedName ;
-}
-
-function validatePictureForm( fields, files ) {
-    // задание: проверить поля на наличие и допустимость
-    if( typeof files["picture"] == 'undefined' ) {
-        return "File required" ;
-    }
-    // title should be
-    if( typeof fields["title"] == 'undefined' ) {
-        return "Title required" ;
-    }
-    if( fields["title"].length == 0 ) {
-        return "Title should be non-empty" ;
-    }
-    // description should be
-    if( typeof fields["description"] == 'undefined' ) {
-        return "Description required" ;
-    }
-    if( fields["description"].length == 0 ) {
-        return "Description should be non-empty" ;
-    }
-    // place optional. But if present then should be non-empty
-    if( typeof fields["place"] != 'undefined'
-     && fields["place"].length == 0 ) {
-        return "Place should be non-empty" ;
-    }
-
-    return true ;
-}
-
-async function send412( response, message ) {
-    response.statusCode = 412 ;
-    response.setHeader( 'Content-Type', 'text/plain' ) ;
-    response.end( "Precondition Failed: " + message ) ;
+    /*
+    if( apiUrl == "picture" ) {
+        
+    }*/
+    /*
+    const moduleName = "./" + apiUrl + "Controller.js" ;
+    if( fs.existsSync( moduleName ) ) {
+        import( moduleName )
+        .then( console.log ) 
+        .catch( console.log )
+    } else {
+        send418( response ) ;
+    }*/
 }
 
 async function send418( response ) {
@@ -547,3 +440,37 @@ function viewAuth( request, response ) {
                 } ;
                analyze( request, response ) ;
            } ) ;    */
+/*
+    Модули: подключение кода из другого файла.
+        В языках-интерпретаторах текст является исполнимым, поэтому есть термин
+        "передать управление в файл" или "выполнить файл" (например, в РНР)
+        file1
+        cmd
+        cmd
+        include(file2)   --> file2
+                                cmd
+                                cmd
+                                cmd
+        cmd              <--       
+        cmd
+    В JS файл обычно считается самостоятельной единицей - модулем.
+    модуль локализует область видимости - все, что объявлено в файле
+    остается видимым только в этом файле. Аналогом модификатора public
+    в модулях является cвойство exports (module.exports) через которое
+    объекты становятся доступными в точке подключения модуля.
+      Подключение модуля (импорт) может быть статическим и динамическим
+    Статический импорт - изначально сканнирует директории на наличие
+    файла-модуля и не запустит программу, если файл не найден. Имя модуля
+    должно быть константой (иногда даже не допускаются ё-кавычки)
+      Динамический импорт - считается экспериментальным (выдает предупреждения)
+    Но позволяет определить имя модуля "на лету" и добавить функциональность
+    в зависимости от необходимости.
+
+    Пример - контроллеры (userCtr, pictureCtr)
+    а) статика - подключаем оба модуля, по тексту запроса определяем какой
+       их них вызвать
+    б) динамика - по тексту запроса определяем имя файла контроллера,
+       пробуем подключить модуль.
+*/
+
+
