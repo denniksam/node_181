@@ -34,7 +34,28 @@ document.addEventListener("submit",(e)=>{
 document.addEventListener("DOMContentLoaded",()=>{
     fetch("/api/picture")
     .then(r=>r.text())
-    .then(console.log)
+    .then(t=>{
+        console.log(t);
+        const j = JSON.parse(t);
+        const cont = document.getElementById("gallery-container");
+        const tpl = '<div style="border:1px solid black;display:inline-block"><img style="max-width:100px" src="/pictures/{{filename}}"/></div>';
+        for(let p of j){
+            /*
+            const div = document.createElement("div");
+            div.style.border = "1px solid black";
+            div.style.display="inline-block";
+
+            const img = document.createElement("img");
+            img.src="/pictures/"+p.filename;
+            img.style["max-width"]="150px";
+
+            div.appendChild(img);
+            cont.appendChild(div);
+            */
+            cont.innerHTML += tpl.replace("{{filename}}",p.filename);
+        }
+
+    });
 });
 /*
     В случае удачной загрузки изображения вывести (добавить на страницу)
