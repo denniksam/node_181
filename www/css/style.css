@@ -19,3 +19,43 @@ body {
     display: inline-block;
     width: 100px;
 }
+.picture-item {
+    border: 2px solid #777;
+    box-shadow: 5px 5px 3px #999;
+    display: inline-block;
+    margin: 10px 20px;
+    padding: 7px;
+    vertical-align: top;
+    width: 300px;
+}
+.picture-item img {
+    float: left;
+    max-width: 150px;
+}
+.tool-buttons {
+    display: block;
+    clear: both;
+    text-align: right;
+}
+.tool-buttons span {
+    background-image: url(../images/btns.png) ;
+    background-size: 300%;
+    cursor: pointer;
+    display: inline-block;
+    height: 30px;
+    margin: 3px;
+    opacity: .5;
+    width: 30px;
+}
+.tool-buttons span:hover {
+    opacity: 1;
+}
+.tb-delete {
+    background-position: -50% 0;
+}
+.tb-download {
+    background-position: -50% 50%;
+}
+.tb-edit {
+    background-position: 0 0;
+}

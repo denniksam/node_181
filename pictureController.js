@@ -18,11 +18,29 @@ module.exports = {
             case 'POST' :  // загрузка новой картины
                 doPost( request, response ) ;
                 break ;
+            case 'DELETE' :  
+                doDelete( request, response ) ;
+                break ;
         }
     }
 } ;
 
+function doDelete( request, response ) {
+    extractBody( request )
+    .then( body => {
+        // Валидация: id должен присутствовать и состоять только из цифр
+        if ( ! body.id || ! /^\d+$/.test( body.id ) ) {  // NaN - 1.56, 1e-1
+            response.errorHandlers.send500();
+            return ;
+        }
+        response.setHeader( 'Content-Type', 'application/json' ) ;
+        response.end( JSON.stringify( { "results": body.id } ) ) ;
+    } ) ;
+}
+
 function doPost( request, response ) {
+    // принять данные формы
+    // ! отключить (если есть) наш обработчик событий data/end
     const formParser = formidable.IncomingForm() ;
     formParser.parse( 
         request, 
@@ -65,11 +83,14 @@ function doPost( request, response ) {
 
 function doGet( request, response ) {
     // Возврать JSON данных по всем картинам
-    request.services.dbPool.query( "select * from pictures", ( err, results ) => {
+    request.services.dbPool.query( 
+        "select p.*, cast(p.id AS CHAR) id_str from pictures p",
+        ( err, results ) => {
         if( err ) {
             console.log( err ) ;
             response.errorHandlers.send500() ;
         } else {
+            // console.log(results);
             response.setHeader( 'Content-Type', 'application/json' ) ;
             response.end( JSON.stringify( results ) ) ;
         }
@@ -128,6 +149,23 @@ function validatePictureForm( fields, files ) {
      && fields["place"].length == 0 ) {
         return "Place should be non-empty" ;
     }
-
     return true ;
+}
+
+function extractBody( request ) {
+    return new Promise( ( resolve, reject ) => {
+        let requestBody = [] ; // массив для чанков
+        request
+            .on( "data", chunk => requestBody.push( chunk ) )
+            .on( "end", () => {
+                try { 
+                    resolve( JSON.parse( 
+                        Buffer.concat( requestBody ).toString()
+                    ) ) ;
+                }
+                catch( ex ) {
+                    reject( ex ) ;
+                }
+           } ) ;
+    } ) ;    
 }

@@ -35,30 +35,37 @@ document.addEventListener("DOMContentLoaded",()=>{
     fetch("/api/picture")
     .then(r=>r.text())
     .then(t=>{
-        console.log(t);
+        // console.log(t);
         const j = JSON.parse(t);
         const cont = document.getElementById("gallery-container");
-        const tpl = '<div style="border:1px solid black;display:inline-block"><img style="max-width:100px" src="/pictures/{{filename}}"/></div>';
-        for(let p of j){
-            /*
-            const div = document.createElement("div");
-            div.style.border = "1px solid black";
-            div.style.display="inline-block";
-
-            const img = document.createElement("img");
-            img.src="/pictures/"+p.filename;
-            img.style["max-width"]="150px";
-
-            div.appendChild(img);
-            cont.appendChild(div);
-            */
-            cont.innerHTML += tpl.replace("{{filename}}",p.filename);
-        }
-
+        fetch("/templates/picture.tpl").then(r=>r.text()).then(tpl=>{
+            var html = "";
+            for(let p of j){
+                html += tpl.replace("{{id}}",p.id_str)
+                           .replace("{{title}}",p.title)
+                           .replace("{{description}}",p.description)
+                           .replace("{{place}}",p.place)
+                           .replace("{{filename}}",p.filename);
+            }
+            cont.innerHTML = html;
+            addToolbuttonListeners();
+        });
     });
 });
-/*
-    В случае удачной загрузки изображения вывести (добавить на страницу)
-     эту картинку и описание / место (если есть) + очистить форму
-    Неудачной - alert и не очищать форму
-*/
+
+async function addToolbuttonListeners() {
+    for(let b of document.querySelectorAll(".tb-delete"))
+        b.addEventListener("click",tbDelClick);
+}
+function tbDelClick(e) {
+    const div = e.target.closest("div");
+    const picId = div.getAttribute("picId");
+    console.log(picId);
+    fetch("/api/picture",{
+        method: "delete",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: `{"id":"${picId}a"}`
+    }).then(r=>r.json()).then(console.log);
+}

@@ -25,6 +25,13 @@ const connectionData = {
 
 const services = { dbPool: null } ;
 
+http.ServerResponse.prototype.send418 = async function() {
+    this.statusCode = 418 ;
+    this.setHeader( 'Content-Type', 'text/plain' ) ;
+    this.end( "teapot" ) ;
+} ;
+
+
 // Серверная функция
 function serverFunction( request, response ) {
 
@@ -43,6 +50,7 @@ function serverFunction( request, response ) {
             response.end( "Precondition Failed: " + message ) ;
         }
     } ;
+// response.send418();
 
     response.on( "close", () => {
         services.dbPool.end() ;
@@ -216,28 +224,25 @@ function getMimeType( path ) {
 
 // Обратка запросов   api/*
 async function processApi( request, response ) {
-    var res = { status: "" } ;
-    // принять данные формы
-    // ! отключить (если есть) наш обработчик событий data/end
-    
     const apiUrl = request.decodedUrl.substring( 4 ) ;  // удаляем api/ из начала   
-   
+   /*
     if( apiUrl == "picture" ) {
         pictureController.analyze( request, response ) ;
-    }
+    }*/
     /*
     if( apiUrl == "picture" ) {
         
-    }*/
-    /*
+    }*/    
     const moduleName = "./" + apiUrl + "Controller.js" ;
     if( fs.existsSync( moduleName ) ) {
         import( moduleName )
-        .then( console.log ) 
+        .then( ( { default: api } ) => {
+            api.analyze( request, response ) ;
+        } ) 
         .catch( console.log )
     } else {
         send418( response ) ;
-    }*/
+    }
 }
 
 async function send418( response ) {
@@ -471,6 +476,36 @@ function viewAuth( request, response ) {
        их них вызвать
     б) динамика - по тексту запроса определяем имя файла контроллера,
        пробуем подключить модуль.
-*/
 
+    -- y = x; - читать х, передать значение в у.
+       на этапе компиляции ошибки нет. => компилятор использует только синтаксический
+       анализатор.
+       на этапе выполнения х не определена, возникает ошибка
+
+       "+" интерпретаторов: возможность работы по имени - проверить есть ли класс,
+           метод, переменная и т.п.
+           РНР - classExists(name) / JS - Object.hasOwnProperty(...)
+                                name = "x" + i
+                 exists(name)!            typeof name == 'undefined'?
+
+            статика                                        динамика
+    + один раз подкючается, потом используется        подключается каждый раз при выполнении кода
+                                                        допускает "горячее" подключение и замену
+    - требует переписывание кода при добавлении модуля     не требует
+
+    ?               подключить динамически, но один раз при старте
+               + не нужно переписывать код      - требуется перезапуск        
+*/
+/*
+    Позднее связывание и this
+    ПС - значение переменной определяется во время выполнения операции
+    for(i) { new Button(click->log(i, this)) }
+    ожидается - 10 кнопок, каждая выводит свой номер и ссылку на себя(Button)
+    реальность - все кнопки выводят 11 (значение i после цикла)
+                 this - объект, в котором <s>находится</s> вызывается click
+                        - Subject - уведомитель механизма событий - объект
+                          самой системы браузера, выше чем BOM (window)
+                          this = undefined
+    В чем проблема? Разница в месте создания функции и ее вызове
+*/
 
