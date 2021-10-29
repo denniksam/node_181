@@ -60,12 +60,22 @@ async function addToolbuttonListeners() {
 function tbDelClick(e) {
     const div = e.target.closest("div");
     const picId = div.getAttribute("picId");
-    console.log(picId);
+    // console.log(picId);
     fetch("/api/picture",{
         method: "delete",
         headers: {
             'Content-Type': 'application/json'
         },
-        body: `{"id":"${picId}a"}`
-    }).then(r=>r.json()).then(console.log);
+        body: `{"id":"${picId}"}`
+    }).then(r=>r.json()).then(j=>{
+        // в ответе сервера должно быть поле result, в нем (affectedRows)
+        // если 1 - было удаление, 0 - не было
+        if(typeof j.result == 'undefined' ) alert("Some error");
+        else if (j.result == 1){
+            // удалить div из контейнера картин
+            div.remove();
+            alert("Delete completed!");
+        }
+        else alert("Deleted fail");
+    });
 }

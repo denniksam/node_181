@@ -3,7 +3,7 @@ const HTTP_PORT    = 80 ;
 const WWW_ROOT     = "www" ;
 const FILE_404     = WWW_ROOT + "/404.html" ;
 const DEFAULT_MIME = "application/octet-stream" ;
-const UPLOAD_PATH  = WWW_ROOT + "/pictures/"
+const UPLOAD_PATH  = WWW_ROOT + "/pictures/" ;
 
 // Подключение модулей
 const http       = require( "http" ) ;        // HTTP
@@ -38,6 +38,8 @@ function serverFunction( request, response ) {
     services.dbPool = mysql2.createPool( connectionData ) ;
 
     request.services = services ;
+    global.services  = services ;
+
     response.errorHandlers = {
         "send500": () => {
             response.statusCode = 500 ;
@@ -124,6 +126,9 @@ function analyze( request, response ) {
     }
     else if( url == 'auth' ) {
         viewAuth( request, response ) ;
+    }
+    else if( url == 'junk' ) {
+        viewJunk( request, response ) ;
     }
     else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/        
         processApi( request, response ) ;
@@ -332,6 +337,11 @@ function viewDb2( request, response ) {
 function viewAuth( request, response ) {
     response.end(request.params.query.login + " " +request.params.query.pass  ) ;
 }
+
+function viewJunk( request, response ) {
+    sendFile( WWW_ROOT + "/junk.html", response ) ;
+}
+
 /*
     npm : Node Pack Manager
     1. Инициализация папки - создание файла package.json

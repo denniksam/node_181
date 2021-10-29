@@ -1,6 +1,7 @@
 
 const formidable = require( "formidable" ) ;  // Form parser
 const fs         = require( "fs" ) ;          // file system
+const { request } = require("http");
 
 const HTTP_PORT    = 80 ;
 const WWW_ROOT     = "www" ;
@@ -21,20 +22,35 @@ module.exports = {
             case 'DELETE' :  
                 doDelete( request, response ) ;
                 break ;
+            case 'PUT' :  
+                doPut( request, response ) ;
+                break ;
         }
     }
 } ;
 
+function doPut( request, response ) {
+    extractBody( request )
+    .then( validateOrm )
+    .then( body => {
+        response.setHeader( 'Content-Type', 'application/json' ) ;
+        response.end( JSON.stringify( { "result": updatePicture( body ) } ) ) ;
+    } )
+    .catch( err => { console.log( err ) ; response.errorHandlers.send412( err ) ; } ) ;
+        
+}
+
 function doDelete( request, response ) {
     extractBody( request )
-    .then( body => {
-        // Валидация: id должен присутствовать и состоять только из цифр
-        if ( ! body.id || ! /^\d+$/.test( body.id ) ) {  // NaN - 1.56, 1e-1
-            response.errorHandlers.send500();
-            return ;
-        }
+    .then( validateId )
+    .then( deletePicture )  // id => deletePicture( id, request ) )
+    .then( results => {
         response.setHeader( 'Content-Type', 'application/json' ) ;
-        response.end( JSON.stringify( { "results": body.id } ) ) ;
+        response.end( JSON.stringify( { "result": results.affectedRows } ) ) ;
+    } )
+    .catch( err => {
+        console.log( err ) ;
+        response.errorHandlers.send500() ;
     } ) ;
 }
 
@@ -82,9 +98,16 @@ function doPost( request, response ) {
 } ;
 
 function doGet( request, response ) {
+    // console.log( request.params ) ;
+    var picQuery = "SELECT p.*, CAST(p.id AS CHAR) id_str FROM pictures p " ;
+    if(typeof request.params.query.deleted == 'undefined') {
+        picQuery += "WHERE p.delete_DT IS NULL" ;
+    } else {
+        picQuery += "WHERE p.delete_DT IS NOT NULL" ;
+    }
     // Возврать JSON данных по всем картинам
     request.services.dbPool.query( 
-        "select p.*, cast(p.id AS CHAR) id_str from pictures p",
+        picQuery,
         ( err, results ) => {
         if( err ) {
             console.log( err ) ;
@@ -97,6 +120,60 @@ function doGet( request, response ) {
     } ) ;
 }
 
+function updatePicture( body ) {
+    var picQuery = "UPDATE pictures SET " ;
+    var picParams = [] ;
+    var needComma = false ;
+    for( let prop in body )
+        if( prop != 'id' ) {
+            if( needComma ) picQuery += ", " ;
+            else needComma = true ;
+            picQuery += prop + " = ? " ;
+            picParams.push( body[prop] ) ;
+        }
+    picQuery += " WHERE id = ?";
+    picParams.push( body.id ) ;
+
+    return picQuery ;
+}
+
+function validateOrm( body ) {
+    return new Promise( (resolve, reject) => {
+        validateId( body )
+        .then( () => {
+            const orm = [ "id", "title", "description", "place", "filename", "users_id", "upload_DT", "delete_DT" ] ;
+            for( let prop in body ) {
+                if( orm.indexOf( prop ) == -1 )
+                    reject( "ORM error: unexpected field " + prop ) ;
+            }
+            resolve( body ) ;
+        } )
+        .catch( err => reject( err ) ) ;
+    } ) ;    
+}
+
+function deletePicture( id, request ) {
+    return new Promise( (resolve, reject) => {
+    global.services.dbPool.query(
+        "UPDATE pictures SET delete_DT = CURRENT_TIMESTAMP WHERE id = ?",
+        id,
+        (err, results) => {
+            if( err ) reject( err ) ;
+            else resolve( results ) ;
+        } ) ;
+    } ) ;
+}
+
+function validateId( body ) {
+    return new Promise( (resolve, reject) => {
+        // Валидация: id должен присутствовать и состоять только из цифр
+        if ( ! body.id || ! /^\d+$/.test( body.id ) ) {  // NaN - 1.56, 1e-1
+            reject( "Id validation error" ) ;
+        } else {
+            resolve( body.id ) ;
+        }
+    } ) ;
+}
 
 function addPicture( pic, services ) {
     const query = "INSERT INTO pictures(title, description, place, filename) VALUES (?, ?, ?, ?)" ;
