@@ -58,6 +58,8 @@ async function addToolbuttonListeners() {
         b.addEventListener("click",tbDelClick);
     for(let b of document.querySelectorAll(".tb-edit"))
         b.addEventListener("click",tbEditClick);
+    for(let b of document.querySelectorAll(".tb-download"))
+        b.addEventListener("click",tbDownloadClick);
 }
 
 function tbDelClick(e) {
@@ -126,4 +128,11 @@ function tbEditClick(e){
         descr.removeAttribute("contenteditable");
 
     }
+}
+
+function tbDownloadClick(e){
+    const div = e.target.closest("div");
+    const picId = div.getAttribute("picId");
+    console.log(picId);
+    window.location = "/download?picid=" + picId;
 }

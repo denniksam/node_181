@@ -130,6 +130,9 @@ function analyze( request, response ) {
     else if( url == 'junk' ) {
         viewJunk( request, response ) ;
     }
+    else if( url == 'download' ) {
+        viewDownload( request, response ) ;
+    }
     else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/        
         processApi( request, response ) ;
         return ;
@@ -152,6 +155,24 @@ server.listen(  // регистрируемся в ОС на получение
         console.log( "Listen start, port " + HTTP_PORT ) ; 
     } 
 ) ;
+
+async function viewDownload( request, response ) {
+    global.services.dbPool.query(
+        "SELECT filename FROM pictures WHERE id = ?",
+        request.params.query.picid,
+        (err, results) => {
+            if(err) {console.log(err); response.errorHandlers.send500();}
+            else {
+                response.setHeader( 'Content-Type', 'application/octet-stream' ) ;
+            // TODO: set name for file
+                fs.createReadStream( UPLOAD_PATH + results[0].filename )
+                  .pipe( response ) ;
+                // response.end( results[0].filename  ) ;
+            }
+        }
+    ) ;
+}
+
 
 async function sendFile2( path, response, statusCode ) {
     fs.readFile(
