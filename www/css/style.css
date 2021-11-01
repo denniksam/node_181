@@ -32,6 +32,9 @@ body {
     float: left;
     max-width: 150px;
 }
+.picture-item p {
+    display: inline-block;
+}
 .tool-buttons {
     display: block;
     clear: both;

@@ -56,8 +56,13 @@ document.addEventListener("DOMContentLoaded",()=>{
 async function addToolbuttonListeners() {
     for(let b of document.querySelectorAll(".tb-delete"))
         b.addEventListener("click",tbDelClick);
+    for(let b of document.querySelectorAll(".tb-edit"))
+        b.addEventListener("click",tbEditClick);
 }
+
 function tbDelClick(e) {
+    if(!confirm("Are you sure?")) return;
+
     const div = e.target.closest("div");
     const picId = div.getAttribute("picId");
     // console.log(picId);
@@ -78,4 +83,47 @@ function tbDelClick(e) {
         }
         else alert("Deleted fail");
     });
+}
+
+function tbEditClick(e){
+    const div = e.target.closest("div");
+    const picId = div.getAttribute("picId");
+    // console.log(picId);
+    const place = div.querySelector("i");
+    if(!place) throw "EditClick: place(<i>) not found";
+    const descr = div.querySelector("p");
+    if(!descr) throw "EditClick: description(<p>) not found";
+
+    // toggle effect
+    if( typeof div.savedPlace == 'undefined'){  // first click
+        div.savedPlace = place.innerHTML;
+        div.savedDecription = descr.innerHTML;
+        // editable content
+        place.setAttribute("contenteditable", "true");
+        descr.setAttribute("contenteditable", "true");
+        descr.focus();
+    
+        console.log(div.savedPlace, div.savedDecription);
+    } else {  // second click
+        // no changes - no fetch
+        // one field changed - one filed fetched
+        let data = {} ;
+        if(div.savedPlace != place.innerHTML) data.place = place.innerHTML;
+        if(div.savedDecription != descr.innerHTML) data.description = descr.innerHTML;
+        if(Object.keys(data).length > 0){
+            data.id = picId;
+            fetch('/api/picture',{
+                method: "put",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(r=>r.text()).then(console.log);
+        }
+        delete div.savedPlace;
+        delete div.savedDecription;
+        place.removeAttribute("contenteditable");
+        descr.removeAttribute("contenteditable");
+
+    }
 }

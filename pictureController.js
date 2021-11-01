@@ -32,12 +32,12 @@ module.exports = {
 function doPut( request, response ) {
     extractBody( request )
     .then( validateOrm )
-    .then( body => {
+    .then( updatePicture )
+    .then( results => {
         response.setHeader( 'Content-Type', 'application/json' ) ;
-        response.end( JSON.stringify( { "result": updatePicture( body ) } ) ) ;
+        response.end( JSON.stringify( { "result": results.affectedRows } ) ) ;
     } )
     .catch( err => { console.log( err ) ; response.errorHandlers.send412( err ) ; } ) ;
-        
 }
 
 function doDelete( request, response ) {
@@ -133,8 +133,17 @@ function updatePicture( body ) {
         }
     picQuery += " WHERE id = ?";
     picParams.push( body.id ) ;
-
-    return picQuery ;
+    
+    // return picQuery ;
+    return new Promise( (resolve, reject) => {
+        global.services.dbPool.query(
+            picQuery,
+            picParams,
+            (err, results) => {
+                if( err ) reject( err ) ;
+                else resolve( results ) ;
+            } ) ;
+        } ) ;
 }
 
 function validateOrm( body ) {
