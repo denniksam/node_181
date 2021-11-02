@@ -11,6 +11,7 @@ const UPLOAD_PATH  = WWW_ROOT + "/pictures/"
 
 module.exports = {
     analyze: function( request, response ) {
+        response.setHeader('Access-Control-Allow-Origin', '*');
         const method = request.method.toUpperCase() ;
         switch( method ) {
             case 'GET'  :  // возврат списка картин
@@ -25,9 +26,24 @@ module.exports = {
             case 'PUT' :  
                 doPut( request, response ) ;
                 break ;
+            case 'OPTIONS' :  
+                doOptions( request, response ) ;
+                break ;
         }
     }
 } ;
+
+function doOptions( request, response ) {
+    // "Разведывательный" запрос. Мы должны ответить клиенту, что мы разрешаем (остальное - нет)
+    // Обычные запросы
+    response.setHeader('Allow', 'OPTIONS, GET, POST, PUT, DELETE' ) ;
+    // CORS
+    // без указания - проходят только OPTIONS, GET, POST
+    response.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST, PUT, DELETE' ) ;
+    // без указания - разрешается только text/plain (по умолчанию)
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type' ) ;
+    response.end();
+}
 
 function doPut( request, response ) {
     extractBody( request )
