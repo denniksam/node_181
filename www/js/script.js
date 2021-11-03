@@ -136,3 +136,35 @@ function tbDownloadClick(e){
     console.log(picId);
     window.location = "/download?picid=" + picId;
 }
+
+document.addEventListener("DOMContentLoaded",()=>{
+    // user-block - auth
+    const userBlock = document.getElementById("user-block");
+    if(!userBlock) throw "userBlock not found";
+    // button click
+    const logBtn = userBlock.querySelector("input[type=button]");
+    if(!logBtn) throw "logIn button not found";
+    logBtn.addEventListener("click", ()=>{
+        const userLogin = userBlock.querySelector("input[type=text]");
+        if(!userLogin) throw "userLogin input not found";
+        const userPassw = userBlock.querySelector("input[type=password]");
+        if(!userPassw) throw "userPassw input not found";
+        // validation
+        if(userLogin.value.length == 0){
+            alert("Логин не может быть пустым");
+            return;
+        }
+        if(userPassw.value.length == 0){
+            alert("Пароль не может быть пустым");
+            return;
+        }
+        fetch(`/api/user?userlogin=${userLogin.value}&userpassw=${userPassw.value}`)
+        .then(r=>r.text()).then(authUser);
+
+        // console.log(userLogin.value, userPassw.value);
+    });
+});
+
+async function authUser(txt){
+    console.log(txt);
+}
