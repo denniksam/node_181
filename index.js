@@ -31,12 +31,11 @@ http.ServerResponse.prototype.send418 = async function() {
     this.end( "teapot" ) ;
 } ;
 
+services.dbPool = mysql2.createPool( connectionData ) ;
 
 // Серверная функция
 function serverFunction( request, response ) {
-
-    services.dbPool = mysql2.createPool( connectionData ) ;
-
+    
     request.services = services ;
     global.services  = services ;
 
@@ -55,7 +54,7 @@ function serverFunction( request, response ) {
 // response.send418();
 
     response.on( "close", () => {
-        services.dbPool.end() ;
+        //services.dbPool.end() ;
     } ) ;
 
     request.params = { 

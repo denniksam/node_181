@@ -138,6 +138,14 @@ function tbDownloadClick(e){
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
+    const authContainer = document.getElementById("auth-container");
+    if(!authContainer) throw "auth-container not found";
+    fetch('/templates/auth_no.tpl')
+    .then(r=>r.text())
+    .then(t=>{ authContainer.innerHTML=t; authControls(); });
+});
+
+async function authControls() {
     // user-block - auth
     const userBlock = document.getElementById("user-block");
     if(!userBlock) throw "userBlock not found";
@@ -163,7 +171,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
         // console.log(userLogin.value, userPassw.value);
     });
-});
+}
 
 async function authUser(txt){
     console.log(txt);

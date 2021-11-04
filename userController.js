@@ -69,8 +69,6 @@ function doGet( request, response ) {
         response.end( "0" ) ;
     } )
     .catch( err => { console.log( err ) ; response.errorHandlers.send500() ; } ) ;
-
-    // response.end( JSON.stringify( request.params.query ) ) ;
 }
 
 function doPost( request, response ) {
