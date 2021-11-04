@@ -59,15 +59,37 @@ function serverFunction( request, response ) {
 
     request.params = { 
         body:  "",
-        query: ""
+        query: "",
+        cookie: {}
     } ;
     analyze( request, response ) ;
+}
+
+function extractCookie( request ) {
+    var res = {} ;
+    if( typeof request.headers.cookie != 'undefined' ) {
+        // cookies separated by '; '
+        const cookies = request.headers.cookie.split( '; ' ) ;
+        // name/value separated by '='
+        for( let c of cookies ) {
+            let pair = c.split( '=' ) ;
+            if( typeof pair[0] != 'undefined'
+             && typeof pair[1] != 'undefined' ) {
+                res[ pair[0] ] = pair[1] ;
+            }
+        }
+    }
+    return res ;
+}
+
+function extractQueryParams( request ) {
+    // TODO: replace code to function
 }
 
 function analyze( request, response ) {
     // логируем запрос - это must have для всех серверов
     console.log( request.method + " " + request.url ) ;
-    console.log( request.headers.cookie ) ;
+    // console.log( request.headers.cookie ) ;
     
     // Декодируем запрос: "+" -> пробел, затем decodeURI
     var decodedUrl = request.url.replace( /\+/g, ' ' )  ;
@@ -89,8 +111,10 @@ function analyze( request, response ) {
                     : pair[1] ;
         }
     }
-    console.log( params ) ;
     request.params.query = params;
+    console.log( request.params.query ) ;    
+    request.params.cookie = extractCookie( request ) ;
+    console.log( request.params.cookie ) ;  
 
     // проверить запрос на спецсимволы (../)
     const restrictedParts = [ "../", ";" ] ;
@@ -113,7 +137,7 @@ function analyze( request, response ) {
     request.decodedUrl = url ;
     if( url == '' ) {
         // запрос / - передаем индексный файл
-        sendFile( "www/index.html", response ) ;
+        sendFile( WWW_ROOT + "/index.html", response ) ;
     }
     else if( url == 'db' ) {
         viewDb( request, response ) ;
@@ -136,6 +160,13 @@ function analyze( request, response ) {
     else if( url.indexOf( "api/" ) == 0 ) {  // запрос начинается с api/        
         processApi( request, response ) ;
         return ;
+    }
+    else if( url == 'templates/auth.tpl' ) {  // шаблон блока авторизации
+        if( typeof request.params.cookie['user-id'] == 'undefined' ) {
+            sendFile( WWW_ROOT + "/templates/auth_no.tpl", response ) ;
+        } else {
+            sendFile( WWW_ROOT + "/templates/auth_yes.tpl", response ) ;
+        }
     }
     else {
         // необработанный запрос - "не найдено" (404.html)

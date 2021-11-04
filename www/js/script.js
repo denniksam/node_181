@@ -137,13 +137,15 @@ function tbDownloadClick(e){
     window.location = "/download?picid=" + picId;
 }
 
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded", loadAuthContainer);
+
+async function loadAuthContainer() {
     const authContainer = document.getElementById("auth-container");
     if(!authContainer) throw "auth-container not found";
-    fetch('/templates/auth_no.tpl')
+    fetch('/templates/auth.tpl')
     .then(r=>r.text())
     .then(t=>{ authContainer.innerHTML=t; authControls(); });
-});
+}
 
 async function authControls() {
     // user-block - auth
@@ -174,5 +176,8 @@ async function authControls() {
 }
 
 async function authUser(txt){
+    // txt = 0 | userId
+    if(txt == "0") alert("Авторизация отклонена");
+    else loadAuthContainer();
     console.log(txt);
 }
