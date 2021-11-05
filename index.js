@@ -4,6 +4,7 @@ const WWW_ROOT     = "www" ;
 const FILE_404     = WWW_ROOT + "/404.html" ;
 const DEFAULT_MIME = "application/octet-stream" ;
 const UPLOAD_PATH  = WWW_ROOT + "/pictures/" ;
+const MAX_SESSION_INTERVAL = 10000 ;  // milliseconds
 
 // Подключение модулей
 const http       = require( "http" ) ;        // HTTP
@@ -23,7 +24,24 @@ const connectionData = {
     charset:  'utf8'           // кодировка канала подключения
 } ;
 
-const services = { dbPool: null } ;
+const services = { dbPool: mysql2.createPool( connectionData ) } ;
+const sessions = {} ;
+var   session ;
+
+// Session cleaner
+setInterval( () => {
+    const moment = new Date() ;
+    let expired = [] ;
+    for( let index in sessions ) {
+        if( moment - sessions[index].timestamp > MAX_SESSION_INTERVAL ) {
+            expired.push( index ) ;
+        }
+    }
+    for( let index of expired ) {
+        delete sessions[ index ] ;
+    }
+} , 1e4 ) ;
+
 
 http.ServerResponse.prototype.send418 = async function() {
     this.statusCode = 418 ;
@@ -31,7 +49,7 @@ http.ServerResponse.prototype.send418 = async function() {
     this.end( "teapot" ) ;
 } ;
 
-services.dbPool = mysql2.createPool( connectionData ) ;
+// services.dbPool = mysql2.createPool( connectionData ) ;
 
 // Серверная функция
 function serverFunction( request, response ) {
@@ -77,16 +95,51 @@ function extractCookie( request ) {
              && typeof pair[1] != 'undefined' ) {
                 res[ pair[0] ] = pair[1] ;
             }
-        }
+        }    
     }
     return res ;
+}
+
+async function startSession( request ) {
+    return new Promise( ( resolve, reject ) => {
+        if( typeof request.params.cookie['session-id'] != 'undefined' ) {  // request contains session id
+            const sessionId = request.params.cookie['session-id'] ;
+        
+            if( typeof sessions[ sessionId ] == 'undefined' ) {  // start of new session
+                // find data about User
+                global.services.dbPool.query(
+                    "SELECT * FROM users WHERE id=?",
+                    sessionId,
+                    ( err, results ) => {
+                        if( err ) {
+                            console.log( "startSession " + err ) ;
+                            session = null ;                            
+                        } else {
+                            sessions[ sessionId ] = {
+                                'timestamp': new Date() ,
+                                user: results
+                            } ;
+                            session = sessions[ sessionId ] ;
+                        }
+                        resolve( session ) ;
+                    }
+                ) ;    
+            } else {  // session id exists in session
+                session = sessions[ sessionId ] ;
+                resolve( session ) ;
+            }            
+        } else {
+            session = null ;
+            resolve( session ) ;
+        }    
+    } ) ;    
 }
 
 function extractQueryParams( request ) {
     // TODO: replace code to function
 }
 
-function analyze( request, response ) {
+async function analyze( request, response ) {
     // логируем запрос - это must have для всех серверов
     console.log( request.method + " " + request.url ) ;
     // console.log( request.headers.cookie ) ;
@@ -112,9 +165,10 @@ function analyze( request, response ) {
         }
     }
     request.params.query = params;
-    console.log( request.params.query ) ;    
+    // console.log( request.params.query ) ;    
     request.params.cookie = extractCookie( request ) ;
-    console.log( request.params.cookie ) ;  
+    await startSession( request ) ;
+    console.log( request.params.query, request.params.cookie/*, session */ ) ;  
 
     // проверить запрос на спецсимволы (../)
     const restrictedParts = [ "../", ";" ] ;
