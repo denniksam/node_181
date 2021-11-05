@@ -25,6 +25,14 @@ module.exports = {
 } ;
 
 function doGet( request, response ) {
+    // if ?/logout 
+    if( typeof request.params.query.logout != 'undefined' ) {
+        global.session = null ;
+        response.setHeader( "Set-Cookie", `session-id=0;max-age=0;path=/` ) ;
+        response.end( "Done" ) ;
+        return ;
+    }
+    // else
     // server-side validation
     var errorMessage = "" ;
     var userlogin, userpassw ;
@@ -61,7 +69,7 @@ function doGet( request, response ) {
             if( results[0].pass_hash == pass ) {
                 let userId = results[0].id_str ;
                 updateLastLoginDt( userId ) ;
-                response.setHeader( "Set-Cookie", `session-id=${userId};max-age=10;path=/` ) ;
+                response.setHeader( "Set-Cookie", `session-id=${userId};max-age=100;path=/` ) ;
                 response.end( userId ) ;
                 return ;
             }
