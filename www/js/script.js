@@ -219,3 +219,30 @@ function filterShownChange(e) {
     // console.log(e.target.value);
     loadPictures({ userMode: e.target.value });
 }
+// --------- PAGINATION ------------
+document.addEventListener("DOMContentLoaded", () => {
+    const prevPageButton = document.getElementById("prevPageButton");
+    if(!prevPageButton) throw "Pagination: prevPageButton not found";
+    const nextPageButton = document.getElementById("nextPageButton");
+    if(!nextPageButton) throw "Pagination: nextPageButton not found";
+    prevPageButton.addEventListener("click", prevPageButtonClick);
+    nextPageButton.addEventListener("click", nextPageButtonClick);
+} );
+function prevPageButtonClick(e){
+    const paginationBlock = e.target.parentNode;
+    var page = paginationBlock.getAttribute("page-number");
+    if(page > 1){
+        page--;
+        paginationBlock.setAttribute("page-number", page);
+    }
+    console.log(page);
+}
+function nextPageButtonClick(e){
+    const paginationBlock = e.target.parentNode;
+    var page = paginationBlock.getAttribute("page-number");
+    if(page < 10){
+        page++;
+        paginationBlock.setAttribute("page-number", page);
+    }
+    console.log(page);
+}

@@ -119,6 +119,7 @@ function doGet( request, response ) {
     var picQuery = "SELECT p.*, CAST(p.id AS CHAR) id_str FROM pictures p " ;
     var conditions = "WHERE "
     var queryParams = [] ;
+    var limits = " LIMIT 0, 4";   // Pagination
 
     if( typeof request.params.query.deleted == 'undefined' ) {
         conditions += " p.delete_DT IS NULL" ;
@@ -134,9 +135,9 @@ function doGet( request, response ) {
         queryParams.push( request.params.query.exceptid ) ;
     }
 
-    // Возврать JSON данных по всем картинам
+    // Возврат JSON данных по всем картинам
     request.services.dbPool.query( 
-        picQuery + conditions,
+        picQuery + conditions + limits,
         queryParams,
         ( err, results ) => {
         if( err ) {
