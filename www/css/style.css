@@ -65,3 +65,15 @@ body {
 .tb-recover {
     background-position: 0 50%;
 }
+
+.user-block {
+    background-color: darkkhaki;
+    padding: 7px 10px;
+}
+
+.user-block-auth {
+    border: 2px solid olive;
+}
+.user-block-auth select {
+    margin-left: 10vw;
+}

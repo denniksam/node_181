@@ -94,7 +94,8 @@ function doPost( request, response ) {
                     title:       fields.title,
                     description: fields.description,
                     place:       fields.place,
-                    filename:    savedName
+                    filename:    savedName,
+                    "users_id":  fields["users_id"]
                 }, request.services )
                 .then( results => {
                     res = { status: results.affectedRows } ;
@@ -116,14 +117,27 @@ function doPost( request, response ) {
 function doGet( request, response ) {
     // console.log( request.params ) ;
     var picQuery = "SELECT p.*, CAST(p.id AS CHAR) id_str FROM pictures p " ;
-    if(typeof request.params.query.deleted == 'undefined') {
-        picQuery += "WHERE p.delete_DT IS NULL" ;
+    var conditions = "WHERE "
+    var queryParams = [] ;
+
+    if( typeof request.params.query.deleted == 'undefined' ) {
+        conditions += " p.delete_DT IS NULL" ;
     } else {
-        picQuery += "WHERE p.delete_DT IS NOT NULL" ;
+        conditions += " p.delete_DT IS NOT NULL" ;
     }
+
+    if( typeof request.params.query.userid != 'undefined' ) {  // Own pictures
+        conditions += " AND p.users_id = ? " ;
+        queryParams.push( request.params.query.userid ) ;
+    } else if( typeof request.params.query.exceptid != 'undefined' ) {  // Not own pictures
+        conditions += " AND ( p.users_id <> ? OR p.users_id IS NULL ) " ;
+        queryParams.push( request.params.query.exceptid ) ;
+    }
+
     // Возврать JSON данных по всем картинам
     request.services.dbPool.query( 
-        picQuery,
+        picQuery + conditions,
+        queryParams,
         ( err, results ) => {
         if( err ) {
             console.log( err ) ;
@@ -201,12 +215,14 @@ function validateId( body ) {
 }
 
 function addPicture( pic, services ) {
-    const query = "INSERT INTO pictures(title, description, place, filename) VALUES (?, ?, ?, ?)" ;
+    const query = "INSERT INTO pictures(title, description, place, filename, users_id) VALUES (?, ?, ?, ?, ?)" ;
     const params = [
         pic.title, 
         pic.description, 
         pic.place, 
-        pic.filename ] ;
+        pic.filename,
+        pic.users_id
+    ] ;
     return new Promise( ( resolve, reject ) => {
         services.dbPool.query( query, params, ( err, results ) => {
             if( err ) reject( err ) ;
@@ -250,6 +266,10 @@ function validatePictureForm( fields, files ) {
     if( typeof fields["place"] != 'undefined'
      && fields["place"].length == 0 ) {
         return "Place should be non-empty" ;
+    }
+    // users_id optional:
+    if( typeof fields["users_id"] == 'undefined' ) {
+        fields["users_id"] = null;
     }
     return true ;
 }

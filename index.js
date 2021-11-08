@@ -4,7 +4,7 @@ const WWW_ROOT     = "www" ;
 const FILE_404     = WWW_ROOT + "/404.html" ;
 const DEFAULT_MIME = "application/octet-stream" ;
 const UPLOAD_PATH  = WWW_ROOT + "/pictures/" ;
-const MAX_SESSION_INTERVAL = 100000 ;  // milliseconds
+const MAX_SESSION_INTERVAL = 1000000 ;  // milliseconds
 
 // Подключение модулей
 const http       = require( "http" ) ;        // HTTP
@@ -109,7 +109,7 @@ async function startSession( request ) {
             if( typeof sessions[ sessionId ] == 'undefined' ) {  // start of new session
                 // find data about User
                 global.services.dbPool.query(
-                    "SELECT * FROM users WHERE id=?",
+                    "SELECT *, CAST(id AS CHAR) id_str FROM users WHERE id=?",
                     sessionId,
                     ( err, results ) => {
                         if( err ) {
@@ -227,7 +227,9 @@ async function analyze( request, response ) {
                     response.errorHandlers.send500() ;
                 }
                 response.end(
-                    data.toString().replace('{{login}}', global.session.user.login )
+                    data.toString()
+                    .replace('{{login}}', global.session.user.login )
+                    .replace('{{id_str}}', global.session.user.id_str )
                 ) ;
             } ) ;            
         }

@@ -20,19 +20,40 @@ document.addEventListener("submit",(e)=>{
     if(place.value.length > 0)
         formData.append("place", place.value);
     formData.append("picture", picture.files[0]);
-/*
-    fetch("/api/picture?" + new URLSearchParams(formData).toString(), {
-        method: "GET"
-    }).then(r=>r.text()).then(console.log);
-    */
+    formData.append("users_id", findUserId());
     fetch("/api/picture", {
         method: "POST",
         body: formData  // new URLSearchParams(formData).toString()
     }).then(r=>r.text()).then(console.log);
 });
 
-document.addEventListener("DOMContentLoaded",()=>{
-    fetch("/api/picture")
+function findUserId() {
+    // user-id (if present) -- <div... id=id="user-block" user-id="{{id_str}}" user-id="{{id_str}}"
+    const userBlock = document.getElementById("user-block");
+    if(userBlock){
+        const userId = userBlock.getAttribute("user-id");
+        if(userId){
+            return userId;
+        }
+    }
+    return null;
+}
+
+document.addEventListener("DOMContentLoaded", ()=>loadPictures() );
+
+function loadPictures(filter) {
+    var url = "/api/picture";
+    if( typeof filter != 'undefined'
+     && typeof filter["userMode"] != 'undefined'){
+        if(filter["userMode"] == 1) {  // Own
+            url += "?userid=" + findUserId();
+        } else if (filter["userMode"] == 2) {  // Not Own
+            url += "?exceptid=" + findUserId();
+        } else {  // All
+
+        }
+    }
+    fetch(url)
     .then(r=>r.text())
     .then(t=>{
         // console.log(t);
@@ -51,7 +72,7 @@ document.addEventListener("DOMContentLoaded",()=>{
             addToolbuttonListeners();
         });
     });
-});
+}
 
 async function addToolbuttonListeners() {
     for(let b of document.querySelectorAll(".tb-delete"))
@@ -159,6 +180,11 @@ async function authControls() {
             fetch(`/api/user?logout`)
             .then(r=>r.text()).then(loadAuthContainer);
         });
+        // selector - filter <select id="filter-shown">
+        const filterShown = document.getElementById("filter-shown");
+        if(filterShown){
+            filterShown.addEventListener("change",filterShownChange);
+        }
     } else { // Вход
         logBtn.addEventListener("click", ()=>{
             const userLogin = userBlock.querySelector("input[type=text]");
@@ -187,4 +213,9 @@ async function authUser(txt){
     if(txt == "0") alert("Авторизация отклонена");
     else loadAuthContainer();
     console.log(txt);
+}
+
+function filterShownChange(e) {
+    // console.log(e.target.value);
+    loadPictures({ userMode: e.target.value });
 }

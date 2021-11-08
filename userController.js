@@ -69,7 +69,7 @@ function doGet( request, response ) {
             if( results[0].pass_hash == pass ) {
                 let userId = results[0].id_str ;
                 updateLastLoginDt( userId ) ;
-                response.setHeader( "Set-Cookie", `session-id=${userId};max-age=100;path=/` ) ;
+                response.setHeader( "Set-Cookie", `session-id=${userId};max-age=1000;path=/` ) ;
                 response.end( userId ) ;
                 return ;
             }
