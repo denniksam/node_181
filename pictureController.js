@@ -115,18 +115,18 @@ function doPost( request, response ) {
 } ;
 
 function doGet( request, response ) {
-    // console.log( request.params ) ;
-    var picQuery = "SELECT p.*, CAST(p.id AS CHAR) id_str FROM pictures p " ;
-    var conditions = "WHERE "
-    var queryParams = [] ;
-    var limits = " LIMIT 0, 4";   // Pagination
+    // Работа с пагинацией проходит в два этапа:
+    // 1. Определяем количество записей и емкость страницы (в данном случае - 4)
+    // 2. Формируем запрос на выборку
 
+    // Учет всех условий должен быть на 1м этапе, т.к. от него зависит общее кол-во
+    var conditions = " WHERE "
+    var queryParams = [] ;
     if( typeof request.params.query.deleted == 'undefined' ) {
         conditions += " p.delete_DT IS NULL" ;
     } else {
         conditions += " p.delete_DT IS NOT NULL" ;
     }
-
     if( typeof request.params.query.userid != 'undefined' ) {  // Own pictures
         conditions += " AND p.users_id = ? " ;
         queryParams.push( request.params.query.userid ) ;
@@ -134,21 +134,39 @@ function doGet( request, response ) {
         conditions += " AND ( p.users_id <> ? OR p.users_id IS NULL ) " ;
         queryParams.push( request.params.query.exceptid ) ;
     }
-
-    // Возврат JSON данных по всем картинам
+    // По собранным условиям определяем кол-во записей
+    const cntQuery = "SELECT COUNT(*) AS cnt FROM pictures p " + conditions ;
     request.services.dbPool.query( 
-        picQuery + conditions + limits,
+        cntQuery,
         queryParams,
         ( err, results ) => {
-        if( err ) {
-            console.log( err ) ;
-            response.errorHandlers.send500() ;
-        } else {
-            // console.log(results);
-            response.setHeader( 'Content-Type', 'application/json' ) ;
-            response.end( JSON.stringify( results ) ) ;
+            if( err ) {
+                console.log( err ) ;
+                response.errorHandlers.send500() ;
+            } else {
+                results[0].cnt ;  // кол-во записей
+                // этап 2: определяем лимиты и запрашиваем данные
+                const perPage = 4 ;            
+                const pageNumber = request.params.query.page ?? 1 ;
+                var limits = ` LIMIT ${perPage*(pageNumber-1)}, ${perPage}`;   // Pagination
+                
+                const picQuery = "SELECT p.*, CAST(p.id AS CHAR) id_str FROM pictures p "  + conditions + limits;
+                request.services.dbPool.query( 
+                    picQuery,
+                    queryParams,
+                    ( err, results ) => {
+                    if( err ) {
+                        console.log( err ) ;
+                        response.errorHandlers.send500() ;
+                    } else {
+                        // console.log(results);
+                        response.setHeader( 'Content-Type', 'application/json' ) ;
+                        response.end( JSON.stringify( results ) ) ;
+                    }
+                } ) ;
+            }
         }
-    } ) ;
+    ) ;    
 }
 
 function updatePicture( body ) {

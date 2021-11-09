@@ -39,40 +39,50 @@ function findUserId() {
     return null;
 }
 
-document.addEventListener("DOMContentLoaded", ()=>loadPictures() );
+document.addEventListener("DOMContentLoaded", ()=>{
+    // создаем объект galleryWindow
+    window.galleryWindow = {
+        state: {},
+        changeState: s => {
+            if( typeof s == 'undefined' ) return ;
+            const state = window.galleryWindow.state;
 
-function loadPictures(filter) {
-    var url = "/api/picture";
-    if( typeof filter != 'undefined'
-     && typeof filter["userMode"] != 'undefined'){
-        if(filter["userMode"] == 1) {  // Own
-            url += "?userid=" + findUserId();
-        } else if (filter["userMode"] == 2) {  // Not Own
-            url += "?exceptid=" + findUserId();
-        } else {  // All
-
-        }
-    }
-    fetch(url)
-    .then(r=>r.text())
-    .then(t=>{
-        // console.log(t);
-        const j = JSON.parse(t);
-        const cont = document.getElementById("gallery-container");
-        fetch("/templates/picture.tpl").then(r=>r.text()).then(tpl=>{
-            var html = "";
-            for(let p of j){
-                html += tpl.replace("{{id}}",p.id_str)
-                           .replace("{{title}}",p.title)
-                           .replace("{{description}}",p.description)
-                           .replace("{{place}}",p.place)
-                           .replace("{{filename}}",p.filename);
+            if( typeof s["pageNumber"] != 'undefined') state.pageNumber = s["pageNumber"];
+            
+            if( typeof s["userMode"] != 'undefined' && s["userMode"] != state.userMode){
+                state.userMode   = s["userMode"];
+                state.pageNumber = 1;
+            } 
+            
+            var url = "/api/picture?page=" + state.pageNumber;
+            if(state.userMode == 1) {  // Own
+                url += "&userid=" + findUserId();
+            } else if (state.userMode == 2) {  // Not Own
+                url += "&exceptid=" + findUserId();
+            } else {  // All
             }
-            cont.innerHTML = html;
-            addToolbuttonListeners();
-        });
-    });
-}
+            
+            fetch(url).then(r=>r.text()).then(t=>{
+                // console.log(t);
+                const j = JSON.parse(t);
+                const cont = document.getElementById("gallery-container");
+                fetch("/templates/picture.tpl").then(r=>r.text()).then(tpl=>{
+                    var html = "";
+                    for(let p of j){
+                        html += tpl.replace("{{id}}",p.id_str)
+                                .replace("{{title}}",p.title)
+                                .replace("{{description}}",p.description)
+                                .replace("{{place}}",p.place)
+                                .replace("{{filename}}",p.filename);
+                    }
+                    cont.innerHTML = html;
+                    addToolbuttonListeners();
+                });
+            });
+        }
+    };
+    window.galleryWindow.changeState( { pageNumber: 1, userMode: 0 } ) ;
+ } );
 
 async function addToolbuttonListeners() {
     for(let b of document.querySelectorAll(".tb-delete"))
@@ -212,12 +222,11 @@ async function authUser(txt){
     // txt = 0 | userId
     if(txt == "0") alert("Авторизация отклонена");
     else loadAuthContainer();
-    console.log(txt);
+   // console.log(txt);
 }
 
 function filterShownChange(e) {
-    // console.log(e.target.value);
-    loadPictures({ userMode: e.target.value });
+    window.galleryWindow.changeState({ userMode: e.target.value });
 }
 // --------- PAGINATION ------------
 document.addEventListener("DOMContentLoaded", () => {
@@ -234,8 +243,10 @@ function prevPageButtonClick(e){
     if(page > 1){
         page--;
         paginationBlock.setAttribute("page-number", page);
+        window.currentPageNumber.innerText = page;
+        window.galleryWindow.changeState({pageNumber: page});
     }
-    console.log(page);
+    // console.log(page);
 }
 function nextPageButtonClick(e){
     const paginationBlock = e.target.parentNode;
@@ -243,6 +254,8 @@ function nextPageButtonClick(e){
     if(page < 10){
         page++;
         paginationBlock.setAttribute("page-number", page);
+        window.currentPageNumber.innerText = page;
+        window.galleryWindow.changeState({pageNumber: page});
     }
     console.log(page);
 }
