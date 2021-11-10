@@ -77,6 +77,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
                     }
                     cont.innerHTML = html;
                     window.galleryWindow.state.pageNumber = j.meta.currentPage ;
+                    window.galleryWindow.state.lastPage = j.meta.lastPage ;
                     addToolbuttonListeners();
                     document.dispatchEvent(new CustomEvent(
                         "galleryWindowChange",
@@ -258,7 +259,7 @@ function nextPageButtonClick(e){
     const paginationBlock = e.target.parentNode;
     // var page = paginationBlock.getAttribute("page-number");
     var page = window.galleryWindow.state.pageNumber;
-    if(page < 10){
+    if(page < window.galleryWindow.state.lastPage){
         page++;
         //paginationBlock.setAttribute("page-number", page);
         //window.currentPageNumber.innerText = page;

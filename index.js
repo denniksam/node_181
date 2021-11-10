@@ -522,12 +522,13 @@ function viewJunk( request, response ) {
     Упражнение "Авторизация"
     1. Создание таблицы
     CREATE TABLE users (
-        id        BIGINT      DEFAULT UUID_SHORT() PRIMARY KEY,
-        login     VARCHAR(64) NOT NULL,
-        pass_salt CHAR(40)    NOT NULL,
-        pass_hash CHAR(40)    NOT NULL,
-        email     VARCHAR(64) NOT NULL,
-        picture   VARCHAR(256)
+        id            BIGINT      DEFAULT UUID_SHORT() PRIMARY KEY,
+        login         VARCHAR(64) NOT NULL,
+        pass_salt     CHAR(40)    NOT NULL,
+        pass_hash     CHAR(40)    NOT NULL,
+        email         VARCHAR(64) NOT NULL,
+        picture       VARCHAR(256),
+        last_login_dt DATETIME
     ) ENGINE = InnoDB, DEFAULT CHARSET = UTF8 ;
 
     2. Тестовые записи (пароль 123)
