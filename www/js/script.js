@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
                 const cont = document.getElementById("gallery-container");
                 fetch("/templates/picture.tpl").then(r=>r.text()).then(tpl=>{
                     var html = "";
-                    for(let p of j){
+                    for(let p of j.data){
                         html += tpl.replace("{{id}}",p.id_str)
                                 .replace("{{title}}",p.title)
                                 .replace("{{description}}",p.description)
@@ -76,7 +76,12 @@ document.addEventListener("DOMContentLoaded", ()=>{
                                 .replace("{{filename}}",p.filename);
                     }
                     cont.innerHTML = html;
+                    window.galleryWindow.state.pageNumber = j.meta.currentPage ;
                     addToolbuttonListeners();
+                    document.dispatchEvent(new CustomEvent(
+                        "galleryWindowChange",
+                        { detail: window.galleryWindow.state }
+                    ));
                 });
             });
         }
@@ -239,23 +244,30 @@ document.addEventListener("DOMContentLoaded", () => {
 } );
 function prevPageButtonClick(e){
     const paginationBlock = e.target.parentNode;
-    var page = paginationBlock.getAttribute("page-number");
+    // var page = paginationBlock.getAttribute("page-number");
+    var page = window.galleryWindow.state.pageNumber;
     if(page > 1){
         page--;
-        paginationBlock.setAttribute("page-number", page);
-        window.currentPageNumber.innerText = page;
+        //paginationBlock.setAttribute("page-number", page);
+        //window.currentPageNumber.innerText = page;
         window.galleryWindow.changeState({pageNumber: page});
     }
     // console.log(page);
 }
 function nextPageButtonClick(e){
     const paginationBlock = e.target.parentNode;
-    var page = paginationBlock.getAttribute("page-number");
+    // var page = paginationBlock.getAttribute("page-number");
+    var page = window.galleryWindow.state.pageNumber;
     if(page < 10){
         page++;
-        paginationBlock.setAttribute("page-number", page);
-        window.currentPageNumber.innerText = page;
+        //paginationBlock.setAttribute("page-number", page);
+        //window.currentPageNumber.innerText = page;
         window.galleryWindow.changeState({pageNumber: page});
     }
-    console.log(page);
+    // console.log(page);
 }
+
+function currentPageNumberListener(e){
+    window.currentPageNumber.innerText = e.detail.pageNumber;
+}
+document.addEventListener("galleryWindowChange", currentPageNumberListener);
