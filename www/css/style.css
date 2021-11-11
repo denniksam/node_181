@@ -25,11 +25,22 @@ body {
     display: inline-block;
     margin: 10px 20px;
     padding: 7px;
+    position: relative;
     vertical-align: top;
-    width: 300px;
+    width: 350px;
+}
+.picture-item .vote {
+    position: absolute;
+    left: 10px;
+    top: 50px;
+}
+.picture-item .vote .vote-like, .picture-item .vote .vote-dislike {
+    cursor: pointer;
+    margin-left: 0.5ex;
 }
 .picture-item img {
     float: left;
+    margin-left: 30px;
     max-width: 150px;
 }
 .picture-item p {

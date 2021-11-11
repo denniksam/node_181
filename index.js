@@ -1,5 +1,5 @@
 // Сервер на JS
-const HTTP_PORT    = 80 ;
+const HTTP_PORT    = 81 ;
 const WWW_ROOT     = "www" ;
 const FILE_404     = WWW_ROOT + "/404.html" ;
 const DEFAULT_MIME = "application/octet-stream" ;

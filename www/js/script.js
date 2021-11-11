@@ -272,3 +272,18 @@ function currentPageNumberListener(e){
     window.currentPageNumber.innerText = e.detail.pageNumber;
 }
 document.addEventListener("galleryWindowChange", currentPageNumberListener);
+
+// -------- VOTES --------------
+function voteHandler(e){
+    if(e.target.classList.contains("vote-dislike")){
+
+    } else {
+        
+    }
+}
+function setVotesHadlers(){
+    for(let v of document.querySelectorAll(".vote-like,.vote-dislike")){
+
+    }
+}
+document.addEventListener("galleryWindowChange", setVotesHadlers);

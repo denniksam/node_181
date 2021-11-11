@@ -77,3 +77,19 @@ Cookie
 galleryWindow.changeState( { pageNumber: 2 } ) ;
 galleryWindow.changeState( { userMode: 1   } ) ;
 galleryWindow.changeState( { dateOrder: -1 } ) ;
+
+---------
+Like / Dislike
+1) Раздельный +(12) -(3)
+2) Совмещенный ^  -1
+               v 
+
+MVC - M(БД), V(View), C(API)
+CREATE TABLE votes ( 
+  id         BIGINT      DEFAULT UUID_SHORT() PRIMARY KEY,
+  picture_id BIGINT, 
+  users_id   BIGINT,
+  vote       INT,
+  moment     DATETIME    DEFAULT CURRENT_TIMESTAMP 
+) ENGINE = InnoDB, DEFAULT CHARSET = UTF8 ;
+
