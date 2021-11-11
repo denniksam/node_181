@@ -3,7 +3,6 @@ const formidable = require( "formidable" ) ;  // Form parser
 const fs         = require( "fs" ) ;          // file system
 const { request } = require("http");
 
-const HTTP_PORT    = 80 ;
 const WWW_ROOT     = "www" ;
 const FILE_404     = WWW_ROOT + "/404.html" ;
 const DEFAULT_MIME = "application/octet-stream" ;

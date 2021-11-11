@@ -275,15 +275,27 @@ document.addEventListener("galleryWindowChange", currentPageNumberListener);
 
 // -------- VOTES --------------
 function voteHandler(e){
-    if(e.target.classList.contains("vote-dislike")){
+    var vote = e.target.classList.contains("vote-dislike")
+                ? -1
+                : 1 ;
+    // user_id
+    const userId = findUserId();
+    // picture_id
+    const pictureId = e.target.closest("[picId]").getAttribute("picId");
+    // console.log(userId, pictureId, vote);
 
-    } else {
-        
-    }
+    fetch("/api/votes", {
+        method: "post",
+        headers: {
+            'Content-Type': 'text/plain'
+        },
+        body: "Hello"
+    }).then(r=>r.text()).then(console.log);
 }
 function setVotesHadlers(){
     for(let v of document.querySelectorAll(".vote-like,.vote-dislike")){
-
+        // element.addEventListener("click",like)
+        v.onclick = voteHandler;
     }
 }
 document.addEventListener("galleryWindowChange", setVotesHadlers);
