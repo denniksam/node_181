@@ -93,3 +93,19 @@ CREATE TABLE votes (
   moment     DATETIME    DEFAULT CURRENT_TIMESTAMP 
 ) ENGINE = InnoDB, DEFAULT CHARSET = UTF8 ;
 
+select 
+ p.*, 
+ CAST(p.id AS CHAR) id_str,
+ coalesce( v.rating, 0 ) rating,
+ coalesce( v.votes, 0 )  votes
+from 
+ pictures p 
+ left join 
+  (select 
+    picture_id,
+    sum(vote) rating,
+    count(id) votes 
+   from 
+    votes 
+   group by picture_id) v
+ on p.id = v.picture_id;

@@ -1,7 +1,7 @@
 <div class="picture-item" picId="{{id}}">
     <div class="vote">
         <div class="vote-like">&#8593;</div>
-        <div class="vote-total">10</div>
+        <div class="vote-total">{{rating}}</div>
         <div class="vote-dislike">&#8595;</div>
     </div>
     <img src="/pictures/{{filename}}" />

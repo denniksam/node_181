@@ -151,7 +151,25 @@ function doGet( request, response ) {
 
                 var limits = ` LIMIT ${perPage*(pageNumber-1)}, ${perPage}`;   // Pagination
                 
-                const picQuery = "SELECT p.*, CAST(p.id AS CHAR) id_str FROM pictures p "  + conditions + limits;
+                // const picQuery = "SELECT p.*, CAST(p.id AS CHAR) id_str FROM pictures p "  + conditions + limits;
+                const picQuery = 
+                `select 
+                    p.*, 
+                    CAST(p.id AS CHAR) id_str,
+                    coalesce( v.rating, 0 ) rating,
+                    coalesce( v.votes, 0 )  votes
+                from 
+                    pictures p 
+                    left join 
+                        (select 
+                            picture_id,
+                            sum(vote) rating,
+                            count(id) votes 
+                        from 
+                            votes 
+                        group by picture_id) v
+                    on p.id = v.picture_id `  + conditions + limits;
+                    
                 request.services.dbPool.query( 
                     picQuery,
                     queryParams,

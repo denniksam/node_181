@@ -73,7 +73,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
                                 .replace("{{title}}",p.title)
                                 .replace("{{description}}",p.description)
                                 .replace("{{place}}",p.place)
-                                .replace("{{filename}}",p.filename);
+                                .replace("{{filename}}",p.filename)
+                                .replace("{{rating}}",p.rating);
                     }
                     cont.innerHTML = html;
                     window.galleryWindow.state.pageNumber = j.meta.currentPage ;
@@ -287,9 +288,13 @@ function voteHandler(e){
     fetch("/api/votes", {
         method: "post",
         headers: {
-            'Content-Type': 'text/plain'
+            'Content-Type': 'application/json'
         },
-        body: "Hello"
+        body: JSON.stringify({
+            "users_id": userId,
+            "picture_id": pictureId,
+            "vote": vote
+        })
     }).then(r=>r.text()).then(console.log);
 }
 function setVotesHadlers(){

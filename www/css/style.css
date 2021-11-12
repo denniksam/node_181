@@ -34,6 +34,9 @@ body {
     left: 10px;
     top: 50px;
 }
+.picture-item .vote .vote-total {
+    text-align: center;
+}
 .picture-item .vote .vote-like, .picture-item .vote .vote-dislike {
     cursor: pointer;
     margin-left: 0.5ex;
